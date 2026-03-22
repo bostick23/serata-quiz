@@ -24,7 +24,7 @@ export default function PlayPage({ params }: Props) {
   const [myTeamId, setMyTeamId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Listen for team:joined to get our teamId
+  // Listen for team:joined to confirm our own join and get our teamId
   useEffect(() => {
     if (!socket) return;
 
@@ -32,12 +32,22 @@ export default function PlayPage({ params }: Props) {
       if (team.name === teamName) {
         console.log("[Play] Team joined confirmed:", team.name, team.id);
         setMyTeamId(team.id);
+        setJoined(true);
+        setJoining(false);
       }
     };
 
+    const joinErrorHandler = () => {
+      // Error message display is handled by useGameState's error listener;
+      // here we only reset the pending join state so the user can retry.
+      setJoining(false);
+    };
+
     socket.on("team:joined", handler);
+    socket.on("error", joinErrorHandler);
     return () => {
       socket.off("team:joined", handler);
+      socket.off("error", joinErrorHandler);
     };
   }, [socket, teamName]);
 
@@ -54,8 +64,6 @@ export default function PlayPage({ params }: Props) {
     console.log("[Play] Emitting game:join", { joinCode, teamName: teamName.trim(), connected: socket.connected });
     setJoining(true);
     socket.emit("game:join", { joinCode, teamName: teamName.trim(), photoUrl: photoUrl ?? undefined });
-    setJoined(true);
-    setJoining(false);
   }
 
   function handleAnswer(chosenIndex: number) {

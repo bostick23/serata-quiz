@@ -141,11 +141,6 @@ export function setupSocketHandlers(io: Server) {
         socket.emit("error", { message: "Partita non trovata" });
         return;
       }
-      if (game.phase !== "lobby") {
-        socket.emit("error", { message: "La partita è già iniziata" });
-        return;
-      }
-
       const existingTeam = Array.from(game.teams.values()).find(t => t.name === teamName);
       if (existingTeam) {
         if (existingTeam.connected) {

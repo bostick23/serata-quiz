@@ -18,6 +18,7 @@ export default function HostPage({ params }: Props) {
   const { seconds } = useCountdown(deadline ?? null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [joinUrl, setJoinUrl] = useState("");
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
     setJoinUrl(`${window.location.origin}/game/${joinCode}/play`);
@@ -50,6 +51,11 @@ export default function HostPage({ params }: Props) {
     socket?.emit("reveal:next", { joinCode });
   }
 
+  function handleCancel() {
+    socket?.emit("game:cancel", { joinCode });
+    setShowCancelConfirm(false);
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
       {/* Connection indicator */}
@@ -57,6 +63,51 @@ export default function HostPage({ params }: Props) {
         <div className={`w-3 h-3 rounded-full ${isConnected ? "bg-emerald-500" : "bg-red-500"} animate-pulse`} />
         <span className="text-xs text-slate-400">{isConnected ? "Connesso" : "Disconnesso"}</span>
       </div>
+
+      {/* Cancel button - visible during active game phases */}
+      {gameState.phase !== "finished" && gameState.phase !== "cancelled" && (
+        <div className="fixed top-4 left-4 z-50">
+          <button
+            onClick={() => setShowCancelConfirm(true)}
+            className="px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/50 text-red-400 text-sm font-medium hover:bg-red-500/30 transition-all"
+          >
+            Annulla partita
+          </button>
+        </div>
+      )}
+
+      {/* Cancel confirmation modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-slate-800 border border-slate-700 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl"
+          >
+            <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">⚠️</span>
+            </div>
+            <h3 className="text-xl font-bold mb-2">Annullare la partita?</h3>
+            <p className="text-slate-400 mb-6">
+              Tutti i giocatori verranno disconnessi e la partita non potrà essere ripresa.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCancelConfirm(false)}
+                className="flex-1 py-3 rounded-xl bg-slate-700 text-white font-semibold hover:bg-slate-600 transition-all"
+              >
+                No, continua
+              </button>
+              <button
+                onClick={handleCancel}
+                className="flex-1 py-3 rounded-xl bg-red-500 text-white font-semibold hover:bg-red-600 transition-all"
+              >
+                Sì, annulla
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {error && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500/20 border border-red-500/50 text-red-400 px-6 py-3 rounded-xl">
@@ -367,6 +418,28 @@ export default function HostPage({ params }: Props) {
             {revealedEntries.length > 0 && gameState.rankings && revealedEntries.length < gameState.rankings.length && (
               <p className="text-slate-500 text-sm mt-8 animate-pulse">Clicca per la prossima posizione...</p>
             )}
+          </motion.div>
+        )}
+
+        {/* CANCELLED PHASE */}
+        {gameState.phase === "cancelled" && (
+          <motion.div
+            key="cancelled"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex-1 flex flex-col items-center justify-center p-8"
+          >
+            <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
+              <span className="text-5xl">✕</span>
+            </div>
+            <h1 className="text-4xl font-extrabold text-red-400 mb-4">Partita Annullata</h1>
+            <p className="text-slate-400 text-lg mb-8">La partita è stata annullata.</p>
+            <a
+              href="/dashboard"
+              className="px-8 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-lg shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all"
+            >
+              Torna alla Dashboard
+            </a>
           </motion.div>
         )}
 

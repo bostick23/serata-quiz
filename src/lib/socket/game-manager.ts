@@ -272,6 +272,38 @@ export function setupSocketHandlers(io: Server) {
       }
     });
 
+    socket.on("game:cancel", async ({ joinCode }) => {
+      const game = activeGames.get(joinCode);
+      if (!game) return;
+      // Only the host can cancel
+      if (game.hostSocketId !== socket.id) return;
+
+      // Clear any running timers
+      if (game.timer) clearTimeout(game.timer);
+
+      // Notify all clients in the room before cleanup
+      io.to(getRoomName(joinCode)).emit("game:cancelled", {
+        message: "La partita è stata annullata dall'host.",
+      });
+
+      // Delete from DB (order matters: answers → teams + gameQuestions → game)
+      const teamIds = await db.select({ id: teams.id }).from(teams).where(eq(teams.gameId, game.gameId));
+      if (teamIds.length > 0) {
+        const gqIds = await db.select({ id: gameQuestions.id }).from(gameQuestions).where(eq(gameQuestions.gameId, game.gameId));
+        if (gqIds.length > 0) {
+          for (const gq of gqIds) {
+            await db.delete(answers).where(eq(answers.gameQuestionId, gq.id));
+          }
+        }
+        await db.delete(teams).where(eq(teams.gameId, game.gameId));
+      }
+      await db.delete(gameQuestions).where(eq(gameQuestions.gameId, game.gameId));
+      await db.delete(games).where(eq(games.id, game.gameId));
+
+      // Remove from active games
+      activeGames.delete(joinCode);
+    });
+
     socket.on("game:request-state", ({ joinCode }) => {
       const game = activeGames.get(joinCode);
       if (game) {

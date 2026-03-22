@@ -80,6 +80,12 @@ export function useGameState(socket: Socket | null, joinCode: string) {
       setDeadline(null);
     });
 
+    socket.on("game:cancelled", ({ message }) => {
+      setGameState(prev => ({ ...prev, phase: "cancelled" }));
+      setDeadline(null);
+      setError(message);
+    });
+
     socket.on("error", ({ message }) => {
       setError(message);
     });
@@ -95,6 +101,7 @@ export function useGameState(socket: Socket | null, joinCode: string) {
       socket.off("round:end");
       socket.off("reveal:position");
       socket.off("game:finished");
+      socket.off("game:cancelled");
       socket.off("error");
     };
   }, [socket]);

@@ -1,7 +1,7 @@
 import { pgTable, uuid, varchar, text, smallint, integer, timestamp, jsonb, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", ["host", "admin"]);
-export const gameStatusEnum = pgEnum("game_status", ["lobby", "playing", "finished"]);
+export const gameStatusEnum = pgEnum("game_status", ["lobby", "playing", "finished", "cancelled"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -49,7 +49,7 @@ export const teams = pgTable("teams", {
   id: uuid("id").defaultRandom().primaryKey(),
   gameId: uuid("game_id").references(() => games.id).notNull(),
   name: varchar("name", { length: 100 }).notNull(),
-  photoUrl: varchar("photo_url", { length: 500 }),
+  photoUrl: text("photo_url"),
   socketId: varchar("socket_id", { length: 100 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [

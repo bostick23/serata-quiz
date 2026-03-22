@@ -1,4 +1,4 @@
-export type GamePhase = "lobby" | "read" | "answer" | "results" | "round-end" | "finished";
+export type GamePhase = "lobby" | "read" | "answer" | "results" | "round-end" | "finished" | "cancelled";
 
 export interface TeamInfo {
   id: string;

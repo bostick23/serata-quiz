@@ -15,14 +15,10 @@ app.prepare().then(async () => {
   const { initSocketServer } = await import("./src/lib/socket/server");
 
   const httpServer = createServer((req, res) => {
-    // Skip Socket.io paths — they are handled by Socket.io's own listener
-    if (req.url?.startsWith("/api/socketio")) {
-      return;
-    }
     handle(req, res);
   });
 
-  // Socket.io attaches its own request listener to httpServer
+  // Socket.io attaches to httpServer and handles WebSocket upgrades
   initSocketServer(httpServer);
 
   httpServer.listen(port, () => {

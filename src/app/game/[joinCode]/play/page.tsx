@@ -231,20 +231,11 @@ export default function PlayPage({ params }: Props) {
               <h2 className="text-xl font-bold text-center">{gameState.question.text}</h2>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 flex-1">
-              {gameState.question.choices.map((choice, i) => (
-                <div
-                  key={i}
-                  className={`${choiceColors[i].split(" ")[0]} rounded-xl p-4 text-white text-lg font-semibold text-center opacity-60`}
-                >
-                  {choice}
-                </div>
-              ))}
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-lg text-slate-400 animate-pulse">
+                Preparati a rispondere...
+              </p>
             </div>
-
-            <p className="text-center text-slate-400 text-sm mt-4 animate-pulse">
-              Preparati a rispondere...
-            </p>
           </motion.div>
         )}
 
@@ -407,6 +398,30 @@ export default function PlayPage({ params }: Props) {
                 );
               })}
             </div>
+          </motion.div>
+        )}
+        {/* CANCELLED PHASE */}
+        {gameState.phase === "cancelled" && (
+          <motion.div
+            key="cancelled"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              className="text-center"
+            >
+              <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
+                <span className="text-4xl text-red-400">✕</span>
+              </div>
+              <h2 className="text-2xl font-bold text-red-400 mb-3">Partita Annullata</h2>
+              <p className="text-slate-400">
+                L&apos;host ha annullato la partita.
+              </p>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

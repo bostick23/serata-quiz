@@ -12,7 +12,7 @@ function getSocket(): TypedSocket {
   if (!globalSocket) {
     globalSocket = io({
       path: "/api/socketio",
-      transports: ["polling", "websocket"],
+      transports: ["websocket"],
     });
   }
   return globalSocket;

@@ -12,6 +12,7 @@ export interface ServerToClientEvents {
   "round:end": (data: { round: number; rankings: RankingEntry[] }) => void;
   "reveal:position": (data: { position: number; entry: RankingEntry }) => void;
   "game:finished": (data: { rankings: RankingEntry[] }) => void;
+  "game:cancelled": (data: { message: string }) => void;
   "error": (data: { message: string }) => void;
 }
 
@@ -22,5 +23,6 @@ export interface ClientToServerEvents {
   "question:next": (data: { joinCode: string }) => void;
   "answer:submit": (data: { joinCode: string; gameQuestionId: string; chosenIndex: number }) => void;
   "reveal:next": (data: { joinCode: string }) => void;
+  "game:cancel": (data: { joinCode: string }) => void;
   "game:request-state": (data: { joinCode: string }) => void;
 }

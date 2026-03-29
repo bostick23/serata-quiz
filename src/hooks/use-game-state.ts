@@ -7,6 +7,7 @@ import type { GameState, RankingEntry } from "@/types/game";
 const initialState: GameState = {
   joinCode: "",
   phase: "lobby",
+  language: "it",
   currentRound: 0,
   currentQuestion: 0,
   totalRounds: 0,
@@ -43,8 +44,15 @@ export function useGameState(socket: Socket | null, joinCode: string) {
       }));
     });
 
+    socket.on("question:category", ({ category, questionNumber, totalQuestions, roundNumber, deadline: d }) => {
+      setGameState(prev => ({ ...prev, phase: "category", currentRound: roundNumber, currentQuestion: questionNumber, correctIndex: undefined, rankings: undefined, isLastQuestion: undefined, categoryName: category }));
+      setDeadline(d);
+      setAnsweredTeams(new Set());
+      setRevealedEntries([]);
+    });
+
     socket.on("question:show", ({ question, phase, deadline: d }) => {
-      setGameState(prev => ({ ...prev, phase: "read", question, correctIndex: undefined, rankings: undefined }));
+      setGameState(prev => ({ ...prev, phase: "read", question, currentRound: question.roundNumber, correctIndex: undefined, rankings: undefined, isLastQuestion: undefined }));
       setDeadline(d);
       setAnsweredTeams(new Set());
       setRevealedEntries([]);
@@ -59,13 +67,13 @@ export function useGameState(socket: Socket | null, joinCode: string) {
       setAnsweredTeams(prev => new Set(prev).add(teamId));
     });
 
-    socket.on("question:results", ({ rankings, correctIndex }) => {
-      setGameState(prev => ({ ...prev, phase: "results", rankings, correctIndex }));
+    socket.on("question:results", ({ rankings, correctIndex, isLastQuestion }) => {
+      setGameState(prev => ({ ...prev, phase: "results", rankings, correctIndex, isLastQuestion }));
       setDeadline(null);
     });
 
     socket.on("round:end", ({ round, rankings }) => {
-      setGameState(prev => ({ ...prev, phase: "round-end", rankings, revealedPositions: 0 }));
+      setGameState(prev => ({ ...prev, phase: "round-end", currentRound: round, rankings, revealedPositions: 0 }));
       setDeadline(null);
       setRevealedEntries([]);
     });
@@ -94,6 +102,7 @@ export function useGameState(socket: Socket | null, joinCode: string) {
       socket.off("game:state");
       socket.off("team:joined");
       socket.off("team:left");
+      socket.off("question:category");
       socket.off("question:show");
       socket.off("question:answer-phase");
       socket.off("answer:received");

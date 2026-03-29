@@ -3,6 +3,7 @@ config({ path: ".env.local" });
 
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
+import { eq } from "drizzle-orm";
 import { questions, users } from "./schema";
 import { hashPassword } from "../auth/helpers";
 
@@ -110,6 +111,128 @@ const quizQuestions = [
   { category: "Natura", text: "Quanti stomaci ha una mucca?", choices: ["1", "2", "3", "4"], correctIndex: 3 },
   { category: "Natura", text: "Quale fiore è il simbolo dell'Olanda?", choices: ["Rosa", "Tulipano", "Girasole", "Margherita"], correctIndex: 1 },
   { category: "Natura", text: "Qual è l'animale terrestre più veloce?", choices: ["Leone", "Ghepardo", "Gazzella", "Cavallo"], correctIndex: 1 },
+
+  // ===== NUOVE 100 DOMANDE =====
+
+  // Geografia (10)
+  { category: "Geografia", text: "Qual è la capitale del Canada?", choices: ["Toronto", "Vancouver", "Ottawa", "Montreal"], correctIndex: 2 },
+  { category: "Geografia", text: "Quale stato africano ha Addis Abeba come capitale?", choices: ["Kenya", "Etiopia", "Nigeria", "Sudan"], correctIndex: 1 },
+  { category: "Geografia", text: "Qual è il lago più grande d'Europa?", choices: ["Lago di Garda", "Lago Balaton", "Lago Ladoga", "Lago di Ginevra"], correctIndex: 2 },
+  { category: "Geografia", text: "In quale paese si trova la Transilvania?", choices: ["Ungheria", "Romania", "Bulgaria", "Serbia"], correctIndex: 1 },
+  { category: "Geografia", text: "Quale città è attraversata dal fiume Senna?", choices: ["Londra", "Berlino", "Parigi", "Madrid"], correctIndex: 2 },
+  { category: "Geografia", text: "Quanti stati ha gli Stati Uniti d'America?", choices: ["48", "50", "51", "52"], correctIndex: 1 },
+  { category: "Geografia", text: "Qual è il vulcano attivo più alto d'Europa?", choices: ["Vesuvio", "Stromboli", "Etna", "Teide"], correctIndex: 2 },
+  { category: "Geografia", text: "Quale stretto separa l'Europa dall'Asia?", choices: ["Stretto di Gibilterra", "Stretto di Magellano", "Stretto del Bosforo", "Stretto di Hormuz"], correctIndex: 2 },
+  { category: "Geografia", text: "In quale continente si trova il deserto di Atacama?", choices: ["Africa", "Asia", "America del Sud", "Oceania"], correctIndex: 2 },
+  { category: "Geografia", text: "Qual è la nazione più estesa del mondo?", choices: ["Canada", "Cina", "Stati Uniti", "Russia"], correctIndex: 3 },
+
+  // Storia (10)
+  { category: "Storia", text: "Chi fu l'ultimo re d'Italia?", choices: ["Vittorio Emanuele II", "Umberto I", "Vittorio Emanuele III", "Umberto II"], correctIndex: 3 },
+  { category: "Storia", text: "In che anno fu firmata la Magna Carta?", choices: ["1066", "1215", "1348", "1453"], correctIndex: 1 },
+  { category: "Storia", text: "Quale civiltà costruì Chichén Itzá?", choices: ["Aztechi", "Inca", "Maya", "Olmechi"], correctIndex: 2 },
+  { category: "Storia", text: "Chi fu il primo presidente degli Stati Uniti?", choices: ["Thomas Jefferson", "Benjamin Franklin", "George Washington", "John Adams"], correctIndex: 2 },
+  { category: "Storia", text: "In che anno l'Italia divenne una Repubblica?", choices: ["1943", "1945", "1946", "1948"], correctIndex: 2 },
+  { category: "Storia", text: "Quale esploratore circumnavigò il globo per primo?", choices: ["Cristoforo Colombo", "Vasco de Gama", "Ferdinando Magellano", "James Cook"], correctIndex: 2 },
+  { category: "Storia", text: "La peste nera devastò l'Europa nel:", choices: ["1248", "1348", "1448", "1548"], correctIndex: 1 },
+  { category: "Storia", text: "Chi era il faraone dalla tomba scoperta nel 1922?", choices: ["Ramses II", "Cleopatra", "Tutankhamon", "Akhenaton"], correctIndex: 2 },
+  { category: "Storia", text: "Quale muro divideva Berlino Est e Ovest?", choices: ["Vallo di Adriano", "Muro di Berlino", "Grande Muraglia", "Linea Maginot"], correctIndex: 1 },
+  { category: "Storia", text: "In che anno fu fondata Roma secondo la tradizione?", choices: ["553 a.C.", "753 a.C.", "853 a.C.", "953 a.C."], correctIndex: 1 },
+
+  // Scienza (10)
+  { category: "Scienza", text: "Quale vitamina è prodotta dall'esposizione al sole?", choices: ["Vitamina A", "Vitamina B12", "Vitamina C", "Vitamina D"], correctIndex: 3 },
+  { category: "Scienza", text: "Qual è la formula chimica dell'acqua?", choices: ["CO2", "H2O", "NaCl", "O2"], correctIndex: 1 },
+  { category: "Scienza", text: "Quanti cromosomi ha l'essere umano?", choices: ["23", "44", "46", "48"], correctIndex: 2 },
+  { category: "Scienza", text: "Quale pianeta è noto come il 'pianeta rosso'?", choices: ["Venere", "Marte", "Giove", "Mercurio"], correctIndex: 1 },
+  { category: "Scienza", text: "Chi ha formulato le leggi del moto?", choices: ["Galileo Galilei", "Isaac Newton", "Albert Einstein", "Keplero"], correctIndex: 1 },
+  { category: "Scienza", text: "Qual è l'unità di misura della corrente elettrica?", choices: ["Volt", "Watt", "Ampere", "Ohm"], correctIndex: 2 },
+  { category: "Scienza", text: "Da cosa è composta principalmente l'aria?", choices: ["Ossigeno e CO2", "Azoto e ossigeno", "Idrogeno e elio", "Ossigeno e argon"], correctIndex: 1 },
+  { category: "Scienza", text: "Qual è il punto di congelamento dell'acqua in gradi Celsius?", choices: ["-10°C", "-5°C", "0°C", "4°C"], correctIndex: 2 },
+  { category: "Scienza", text: "Quale organo produce l'insulina?", choices: ["Fegato", "Reni", "Pancreas", "Stomaco"], correctIndex: 2 },
+  { category: "Scienza", text: "Qual è la velocità della luce approssimata?", choices: ["100.000 km/s", "200.000 km/s", "300.000 km/s", "400.000 km/s"], correctIndex: 2 },
+
+  // Sport (10)
+  { category: "Sport", text: "In quale sport si usa un volano?", choices: ["Tennis", "Badminton", "Squash", "Ping pong"], correctIndex: 1 },
+  { category: "Sport", text: "Quale squadra di calcio è soprannominata 'i Reds'?", choices: ["Manchester United", "Arsenal", "Liverpool", "Milan"], correctIndex: 2 },
+  { category: "Sport", text: "Quanti giocatori compongono una squadra di baseball in campo?", choices: ["7", "9", "10", "11"], correctIndex: 1 },
+  { category: "Sport", text: "In quale paese sono nati i Giochi Olimpici?", choices: ["Italia", "Egitto", "Grecia", "Turchia"], correctIndex: 2 },
+  { category: "Sport", text: "Chi ha vinto più palloni d'oro nella storia?", choices: ["Cristiano Ronaldo", "Lionel Messi", "Michel Platini", "Johan Cruyff"], correctIndex: 1 },
+  { category: "Sport", text: "Quale sport pratica Tiger Woods?", choices: ["Tennis", "Cricket", "Golf", "Polo"], correctIndex: 2 },
+  { category: "Sport", text: "Quanto è lungo un campo da calcio regolamentare?", choices: ["90 m", "100 m", "105 m", "110 m"], correctIndex: 2 },
+  { category: "Sport", text: "In quale sport si effettua un 'slam dunk'?", choices: ["Pallavolo", "Basket", "Handball", "Football americano"], correctIndex: 1 },
+  { category: "Sport", text: "Quale Gran Premio di F1 si corre a Monza?", choices: ["Gran Premio di Monza", "Gran Premio d'Italia", "Gran Premio d'Europa", "Gran Premio di Lombardia"], correctIndex: 1 },
+  { category: "Sport", text: "Quante buche ha un percorso di golf standard?", choices: ["9", "12", "16", "18"], correctIndex: 3 },
+
+  // Cinema e TV (10)
+  { category: "Cinema e TV", text: "Quale film Disney racconta la storia di un leone?", choices: ["Bambi", "Il Re Leone", "Madagascar", "Alla ricerca di Nemo"], correctIndex: 1 },
+  { category: "Cinema e TV", text: "Chi interpreta Iron Man nel MCU?", choices: ["Chris Evans", "Robert Downey Jr.", "Chris Hemsworth", "Mark Ruffalo"], correctIndex: 1 },
+  { category: "Cinema e TV", text: "In quale saga cinematografica appare Gandalf?", choices: ["Harry Potter", "Star Wars", "Il Signore degli Anelli", "Narnia"], correctIndex: 2 },
+  { category: "Cinema e TV", text: "Quale serie TV è ambientata a Westeros?", choices: ["The Witcher", "Game of Thrones", "Vikings", "Il Trono di Spade... ops, Outlander"], correctIndex: 1 },
+  { category: "Cinema e TV", text: "Chi ha diretto 'Schindler's List'?", choices: ["Martin Scorsese", "Steven Spielberg", "Francis Ford Coppola", "Ridley Scott"], correctIndex: 1 },
+  { category: "Cinema e TV", text: "Quale attrice interpreta Katniss Everdeen in 'Hunger Games'?", choices: ["Emma Watson", "Jennifer Lawrence", "Scarlett Johansson", "Natalie Portman"], correctIndex: 1 },
+  { category: "Cinema e TV", text: "In quale anno è uscito 'Matrix'?", choices: ["1997", "1999", "2001", "2003"], correctIndex: 1 },
+  { category: "Cinema e TV", text: "Quale personaggio dice 'Io sono tuo padre'?", choices: ["Obi-Wan Kenobi", "Yoda", "Darth Vader", "Palpatine"], correctIndex: 2 },
+  { category: "Cinema e TV", text: "Quale regista è famoso per i colpi di scena finali?", choices: ["Christopher Nolan", "M. Night Shyamalan", "David Fincher", "Denis Villeneuve"], correctIndex: 1 },
+  { category: "Cinema e TV", text: "Quanti film ci sono nella saga di 'Il Padrino'?", choices: ["2", "3", "4", "5"], correctIndex: 1 },
+
+  // Musica (10)
+  { category: "Musica", text: "Quale band ha cantato 'Stairway to Heaven'?", choices: ["Pink Floyd", "Led Zeppelin", "Deep Purple", "Black Sabbath"], correctIndex: 1 },
+  { category: "Musica", text: "Chi ha composto la Nona Sinfonia?", choices: ["Mozart", "Beethoven", "Bach", "Haydn"], correctIndex: 1 },
+  { category: "Musica", text: "Quale cantante è soprannominata 'Queen of Pop'?", choices: ["Whitney Houston", "Lady Gaga", "Madonna", "Beyoncé"], correctIndex: 2 },
+  { category: "Musica", text: "Quante note ha la scala musicale?", choices: ["5", "6", "7", "8"], correctIndex: 2 },
+  { category: "Musica", text: "Da quale città provengono i Beatles?", choices: ["Londra", "Manchester", "Liverpool", "Birmingham"], correctIndex: 2 },
+  { category: "Musica", text: "Quale strumento musicale ha 88 tasti?", choices: ["Organo", "Pianoforte", "Fisarmonica", "Sintetizzatore"], correctIndex: 1 },
+  { category: "Musica", text: "Chi ha cantato 'Volare' (Nel blu dipinto di blu)?", choices: ["Lucio Dalla", "Domenico Modugno", "Adriano Celentano", "Mina"], correctIndex: 1 },
+  { category: "Musica", text: "Quale genere musicale è nato a New Orleans?", choices: ["Blues", "Rock", "Jazz", "Country"], correctIndex: 2 },
+  { category: "Musica", text: "Chi è il frontman dei Rolling Stones?", choices: ["Keith Richards", "Mick Jagger", "Ronnie Wood", "Charlie Watts"], correctIndex: 1 },
+  { category: "Musica", text: "Quale opera lirica include 'La donna è mobile'?", choices: ["La Traviata", "Rigoletto", "Aida", "Tosca"], correctIndex: 1 },
+
+  // Cucina (10)
+  { category: "Cucina", text: "Quale spezia dà il colore giallo al curry?", choices: ["Paprika", "Curcuma", "Zenzero", "Cumino"], correctIndex: 1 },
+  { category: "Cucina", text: "Da quale paese proviene il kimchi?", choices: ["Giappone", "Cina", "Corea", "Thailandia"], correctIndex: 2 },
+  { category: "Cucina", text: "Qual è l'ingrediente base del hummus?", choices: ["Lenticchie", "Ceci", "Fagioli", "Piselli"], correctIndex: 1 },
+  { category: "Cucina", text: "Quale vino italiano è prodotto in Toscana?", choices: ["Barolo", "Chianti", "Amarone", "Prosecco"], correctIndex: 1 },
+  { category: "Cucina", text: "Cos'è il wasabi?", choices: ["Un pesce", "Un'alga", "Una radice piccante", "Un fungo"], correctIndex: 2 },
+  { category: "Cucina", text: "Quale dolce italiano è fatto con mascarpone e caffè?", choices: ["Panna cotta", "Cannolo", "Tiramisù", "Profiterole"], correctIndex: 2 },
+  { category: "Cucina", text: "Da quale animale proviene il lardo?", choices: ["Mucca", "Pecora", "Maiale", "Capra"], correctIndex: 2 },
+  { category: "Cucina", text: "Quale paese è famoso per il cous cous?", choices: ["India", "Marocco", "Grecia", "Turchia"], correctIndex: 1 },
+  { category: "Cucina", text: "Come si chiama il riso giapponese per sushi?", choices: ["Basmati", "Arborio", "Jasmine", "Shari"], correctIndex: 3 },
+  { category: "Cucina", text: "Qual è il formaggio francese più famoso?", choices: ["Gruyère", "Camembert", "Gouda", "Cheddar"], correctIndex: 1 },
+
+  // Letteratura (10)
+  { category: "Letteratura", text: "Chi ha scritto '1984'?", choices: ["Aldous Huxley", "George Orwell", "Ray Bradbury", "Isaac Asimov"], correctIndex: 1 },
+  { category: "Letteratura", text: "Quale scrittore ha creato il personaggio di Pinocchio?", choices: ["Gianni Rodari", "Carlo Collodi", "Italo Calvino", "Edmondo De Amicis"], correctIndex: 1 },
+  { category: "Letteratura", text: "In quale libro compare il capitano Achab?", choices: ["L'isola del tesoro", "Moby Dick", "Robinson Crusoe", "20.000 leghe sotto i mari"], correctIndex: 1 },
+  { category: "Letteratura", text: "Chi ha scritto 'Romeo e Giulietta'?", choices: ["Molière", "Oscar Wilde", "William Shakespeare", "Lord Byron"], correctIndex: 2 },
+  { category: "Letteratura", text: "Quale autore ha scritto 'Il nome della rosa'?", choices: ["Italo Calvino", "Umberto Eco", "Alberto Moravia", "Primo Levi"], correctIndex: 1 },
+  { category: "Letteratura", text: "In quale romanzo appare il personaggio di D'Artagnan?", choices: ["I tre moschettieri", "Il Conte di Montecristo", "Ivanhoe", "Robin Hood"], correctIndex: 0 },
+  { category: "Letteratura", text: "Chi è l'autore de 'Il piccolo principe'?", choices: ["Jules Verne", "Victor Hugo", "Antoine de Saint-Exupéry", "Albert Camus"], correctIndex: 2 },
+  { category: "Letteratura", text: "Quale poeta ha scritto 'A Silvia'?", choices: ["Ugo Foscolo", "Giacomo Leopardi", "Giovanni Pascoli", "Giosuè Carducci"], correctIndex: 1 },
+  { category: "Letteratura", text: "Chi ha scritto 'Don Chisciotte'?", choices: ["Cervantes", "Lope de Vega", "García Lorca", "Calderón de la Barca"], correctIndex: 0 },
+  { category: "Letteratura", text: "Quale saga fantasy è stata scritta da J.R.R. Tolkien?", choices: ["Le Cronache di Narnia", "Harry Potter", "Il Signore degli Anelli", "La Ruota del Tempo"], correctIndex: 2 },
+
+  // Natura e Animali (10)
+  { category: "Natura", text: "Quale uccello è il più grande al mondo?", choices: ["Condor", "Aquila reale", "Struzzo", "Albatros"], correctIndex: 2 },
+  { category: "Natura", text: "Quante zampe ha un ragno?", choices: ["6", "8", "10", "12"], correctIndex: 1 },
+  { category: "Natura", text: "Quale animale può cambiare colore?", choices: ["Iguana", "Camaleonte", "Geco", "Lucertola"], correctIndex: 1 },
+  { category: "Natura", text: "Qual è l'albero simbolo del Giappone?", choices: ["Bambù", "Bonsai", "Ciliegio", "Acero"], correctIndex: 2 },
+  { category: "Natura", text: "Quanto può pesare un elefante africano adulto?", choices: ["2 tonnellate", "4 tonnellate", "6 tonnellate", "8 tonnellate"], correctIndex: 2 },
+  { category: "Natura", text: "Quale pesce può generare scariche elettriche?", choices: ["Pesce palla", "Anguilla elettrica", "Pesce spada", "Murena"], correctIndex: 1 },
+  { category: "Natura", text: "Quale animale dorme circa 22 ore al giorno?", choices: ["Gatto", "Bradipo", "Koala", "Pipistrello"], correctIndex: 2 },
+  { category: "Natura", text: "Qual è il serpente più lungo del mondo?", choices: ["Anaconda", "Pitone reticolato", "Cobra reale", "Mamba nero"], correctIndex: 1 },
+  { category: "Natura", text: "Quale insetto produce il miele?", choices: ["Vespa", "Ape", "Bombo", "Calabrone"], correctIndex: 1 },
+  { category: "Natura", text: "Quanto vive mediamente una tartaruga gigante?", choices: ["50 anni", "80 anni", "100 anni", "150 anni"], correctIndex: 3 },
+
+  // Tecnologia (10)
+  { category: "Tecnologia", text: "Chi ha fondato Apple?", choices: ["Bill Gates", "Steve Jobs", "Mark Zuckerberg", "Jeff Bezos"], correctIndex: 1 },
+  { category: "Tecnologia", text: "In che anno è stato lanciato il primo iPhone?", choices: ["2005", "2006", "2007", "2008"], correctIndex: 2 },
+  { category: "Tecnologia", text: "Cosa significa l'acronimo 'URL'?", choices: ["Universal Resource Link", "Uniform Resource Locator", "United Reference Link", "Universal Reference Locator"], correctIndex: 1 },
+  { category: "Tecnologia", text: "Quale azienda ha creato il sistema operativo Android?", choices: ["Apple", "Microsoft", "Google", "Samsung"], correctIndex: 2 },
+  { category: "Tecnologia", text: "Cos'è il 'cloud computing'?", choices: ["Un tipo di hardware", "Servizi informatici via internet", "Un linguaggio di programmazione", "Un sistema operativo"], correctIndex: 1 },
+  { category: "Tecnologia", text: "Chi ha fondato Facebook?", choices: ["Jack Dorsey", "Elon Musk", "Mark Zuckerberg", "Larry Page"], correctIndex: 2 },
+  { category: "Tecnologia", text: "Cosa significa 'AI'?", choices: ["Automated Internet", "Artificial Intelligence", "Advanced Integration", "Applied Informatics"], correctIndex: 1 },
+  { category: "Tecnologia", text: "Quale fu il primo motore di ricerca popolare?", choices: ["Google", "Yahoo", "Bing", "AltaVista"], correctIndex: 1 },
+  { category: "Tecnologia", text: "In che anno è stato creato Wikipedia?", choices: ["1999", "2001", "2003", "2005"], correctIndex: 1 },
+  { category: "Tecnologia", text: "Quale linguaggio di programmazione ha il logo di un serpente?", choices: ["Java", "Ruby", "Python", "Go"], correctIndex: 2 },
 ];
 
 async function seed() {
@@ -133,18 +256,23 @@ async function seed() {
     role: "host",
   }).onConflictDoNothing();
 
-  // Insert questions (global, no owner)
+  // Insert questions (global, no owner) — skip duplicates by text
+  let inserted = 0;
   for (const q of quizQuestions) {
+    const existing = await db.select({ id: questions.id }).from(questions).where(eq(questions.text, q.text)).limit(1);
+    if (existing.length > 0) continue;
     await db.insert(questions).values({
       ownerId: null,
       category: q.category,
+      language: "it",
       text: q.text,
       choices: q.choices,
       correctIndex: q.correctIndex,
     });
+    inserted++;
   }
 
-  console.log(`Seeded ${quizQuestions.length} questions`);
+  console.log(`Seeded ${inserted} new questions (${quizQuestions.length - inserted} already existed)`);
   console.log("Admin: admin@serataquiz.it / admin123");
   console.log("Host:  host@serataquiz.it / host123");
 

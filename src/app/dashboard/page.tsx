@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [showForm, setShowForm] = useState(false);
   const [numRounds, setNumRounds] = useState(3);
   const [questionsPerRound, setQuestionsPerRound] = useState(5);
+  const [language, setLanguage] = useState<"it" | "en">("it");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [loadingGames, setLoadingGames] = useState(true);
@@ -72,7 +73,7 @@ export default function DashboardPage() {
       const res = await fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ numRounds, questionsPerRound }),
+        body: JSON.stringify({ numRounds, questionsPerRound, language }),
       });
 
       const data = await res.json();
@@ -155,6 +156,39 @@ export default function DashboardPage() {
                 )}
 
                 <form onSubmit={handleCreate} className="space-y-4">
+                  {/* Language selector */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Lingua delle domande
+                    </label>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setLanguage("it")}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all ${
+                          language === "it"
+                            ? "border-purple-500 bg-purple-500/20 text-white"
+                            : "border-slate-600 bg-slate-700 text-slate-400 hover:border-slate-500"
+                        }`}
+                      >
+                        <span className="text-2xl">🇮🇹</span>
+                        <span className="font-medium">Italiano</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLanguage("en")}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all ${
+                          language === "en"
+                            ? "border-purple-500 bg-purple-500/20 text-white"
+                            : "border-slate-600 bg-slate-700 text-slate-400 hover:border-slate-500"
+                        }`}
+                      >
+                        <span className="text-2xl">🇬🇧</span>
+                        <span className="font-medium">English</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="numRounds" className="block text-sm font-medium text-slate-300 mb-1.5">

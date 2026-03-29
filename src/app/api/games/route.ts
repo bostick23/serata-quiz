@@ -4,11 +4,12 @@ import { db } from "@/lib/db";
 import { games, gameQuestions, questions } from "@/lib/db/schema";
 import { auth } from "@/lib/auth/config";
 import { generateJoinCode } from "@/lib/utils/join-code";
-import { eq, or, isNull, desc } from "drizzle-orm";
+import { eq, or, isNull, desc, and } from "drizzle-orm";
 
 const createGameSchema = z.object({
   numRounds: z.number().int().min(1).max(10),
   questionsPerRound: z.number().int().min(1).max(20),
+  language: z.enum(["it", "en"]).default("it"),
 });
 
 function shuffle<T>(arr: T[]): T[] {
@@ -36,14 +37,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const { numRounds, questionsPerRound } = parsed.data;
+    const { numRounds, questionsPerRound, language } = parsed.data;
     const totalQuestions = numRounds * questionsPerRound;
 
     const availableQuestions = await db
       .select()
       .from(questions)
       .where(
-        or(isNull(questions.ownerId), eq(questions.ownerId, session.user.id))
+        and(
+          eq(questions.language, language),
+          or(isNull(questions.ownerId), eq(questions.ownerId, session.user.id))
+        )
       );
 
     if (availableQuestions.length < totalQuestions) {
@@ -63,6 +67,7 @@ export async function POST(request: Request) {
       .values({
         hostId: session.user.id,
         joinCode,
+        language,
         numRounds,
         questionsPerRound,
       })

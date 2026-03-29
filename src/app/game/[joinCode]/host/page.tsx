@@ -1,11 +1,55 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useSocket } from "@/hooks/use-socket";
 import { useGameState } from "@/hooks/use-game-state";
 import { useCountdown } from "@/hooks/use-countdown";
 import { motion, AnimatePresence } from "framer-motion";
 import type { RankingEntry } from "@/types/game";
+
+const categoryIcons: Record<string, string> = {
+  // Italian
+  "Geografia": "🌍",
+  "Storia": "📜",
+  "Scienza": "🔬",
+  "Sport": "⚽",
+  "Cinema e TV": "🎬",
+  "Musica": "🎵",
+  "Cucina": "🍝",
+  "Letteratura": "📚",
+  "Natura": "🌿",
+  "Tecnologia": "💻",
+  "Arte": "🎨",
+  // English (OpenTDB)
+  "General Knowledge": "🧠",
+  "Entertainment: Books": "📚",
+  "Entertainment: Film": "🎬",
+  "Entertainment: Music": "🎵",
+  "Entertainment: Musicals & Theatres": "🎭",
+  "Entertainment: Television": "📺",
+  "Entertainment: Video Games": "🎮",
+  "Entertainment: Board Games": "🎲",
+  "Science & Nature": "🔬",
+  "Science: Computers": "💻",
+  "Science: Mathematics": "🔢",
+  "Science: Gadgets": "📱",
+  "Mythology": "⚡",
+  "Sports": "⚽",
+  "Geography": "🌍",
+  "History": "📜",
+  "Politics": "🏛️",
+  "Art": "🎨",
+  "Celebrities": "⭐",
+  "Animals": "🐾",
+  "Vehicles": "🚗",
+  "Entertainment: Comics": "💥",
+  "Entertainment: Japanese Anime & Manga": "🎌",
+  "Entertainment: Cartoon & Animations": "🖍️",
+};
+
+function getCategoryIcon(category: string): string {
+  return categoryIcons[category] ?? "❓";
+}
 
 interface Props {
   params: Promise<{ joinCode: string }>;
@@ -19,6 +63,68 @@ export default function HostPage({ params }: Props) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [joinUrl, setJoinUrl] = useState("");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+
+  // Load voice based on game language
+  useEffect(() => {
+    const lang = gameState.language || "it";
+    function pickVoice() {
+      const voices = speechSynthesis.getVoices();
+      const langPrefix = lang === "en" ? "en" : "it";
+      const filtered = voices.filter(v => v.lang.startsWith(langPrefix));
+
+      const priority = lang === "en"
+        ? [
+            (v: SpeechSynthesisVoice) => /samantha/i.test(v.name),
+            (v: SpeechSynthesisVoice) => /google.*us/i.test(v.name),
+            (v: SpeechSynthesisVoice) => /google.*uk/i.test(v.name),
+            (v: SpeechSynthesisVoice) => /siri/i.test(v.name),
+            (v: SpeechSynthesisVoice) => /karen|moira|tessa/i.test(v.name),
+          ]
+        : [
+            (v: SpeechSynthesisVoice) => /sara/i.test(v.name),
+            (v: SpeechSynthesisVoice) => /marisa/i.test(v.name),
+            (v: SpeechSynthesisVoice) => /siri/i.test(v.name),
+            (v: SpeechSynthesisVoice) => /google.*italiano/i.test(v.name),
+            (v: SpeechSynthesisVoice) => /federica|elsa/i.test(v.name),
+            (v: SpeechSynthesisVoice) => /alice/i.test(v.name),
+          ];
+
+      for (const test of priority) {
+        const match = filtered.find(test);
+        if (match) { voiceRef.current = match; return; }
+      }
+      voiceRef.current = filtered[0] ?? null;
+    }
+    pickVoice();
+    speechSynthesis.addEventListener("voiceschanged", pickVoice);
+    return () => speechSynthesis.removeEventListener("voiceschanged", pickVoice);
+  }, [gameState.language]);
+
+  function speak(text: string) {
+    speechSynthesis.cancel();
+    const lang = gameState.language || "it";
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang === "en" ? "en-US" : "it-IT";
+    utterance.rate = 0.95;
+    utterance.pitch = 1.1;
+    if (voiceRef.current) utterance.voice = voiceRef.current;
+    speechSynthesis.speak(utterance);
+  }
+
+  // Speak category name during category phase
+  useEffect(() => {
+    if (gameState.phase === "category" && gameState.categoryName) {
+      speak(gameState.categoryName);
+    }
+  }, [gameState.phase, gameState.categoryName]);
+
+  // Speak question text during read phase
+  useEffect(() => {
+    if (gameState.phase === "read" && gameState.question) {
+      speak(gameState.question.text);
+    }
+  }, [gameState.phase, gameState.question?.gameQuestionId]);
 
   useEffect(() => {
     setJoinUrl(`${window.location.origin}/game/${joinCode}/play`);
@@ -188,6 +294,43 @@ export default function HostPage({ params }: Props) {
           </motion.div>
         )}
 
+        {/* CATEGORY PHASE */}
+        {gameState.phase === "category" && gameState.categoryName && (
+          <motion.div
+            key="category"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            className="flex-1 flex flex-col items-center justify-center p-8"
+          >
+            <div className="text-slate-400 mb-4 text-sm">
+              Manche {gameState.currentRound} - Domanda {gameState.currentQuestion}/{gameState.questionsPerRound}
+            </div>
+
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+              className="text-8xl mb-6"
+            >
+              {getCategoryIcon(gameState.categoryName)}
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-5xl font-extrabold text-center gradient-text mb-8"
+            >
+              {gameState.categoryName}
+            </motion.h1>
+
+            <div className={`text-5xl font-bold font-mono ${seconds <= 2 ? "text-red-500 animate-pulse" : "text-slate-500"}`}>
+              {seconds}
+            </div>
+          </motion.div>
+        )}
+
         {/* READ PHASE */}
         {gameState.phase === "read" && gameState.question && (
           <motion.div
@@ -213,22 +356,12 @@ export default function HostPage({ params }: Props) {
             </div>
 
             <div className="max-w-3xl w-full bg-slate-800 border border-slate-700 rounded-2xl p-8 shadow-xl mb-8">
-              <h2 className="text-3xl font-bold text-center mb-8">{gameState.question.text}</h2>
-
-              <div className="grid grid-cols-2 gap-4">
-                {gameState.question.choices.map((choice, i) => {
-                  const colors = ["bg-red-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500"];
-                  return (
-                    <div
-                      key={i}
-                      className={`${colors[i]} rounded-xl p-5 text-white text-xl font-semibold text-center`}
-                    >
-                      {choice}
-                    </div>
-                  );
-                })}
-              </div>
+              <h2 className="text-3xl font-bold text-center">{gameState.question.text}</h2>
             </div>
+
+            <p className="text-2xl text-slate-400 animate-pulse">
+              Le risposte appariranno tra poco...
+            </p>
           </motion.div>
         )}
 
@@ -282,58 +415,143 @@ export default function HostPage({ params }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col items-center justify-center p-8"
+            className="flex-1 flex flex-col items-center p-8 overflow-y-auto"
           >
             <div className="text-purple-400 text-xl font-bold mb-6 tracking-widest uppercase">
               Risultati
             </div>
 
+            {/* Question + answers with team avatars */}
             <div className="max-w-3xl w-full bg-slate-800 border border-slate-700 rounded-2xl p-8 shadow-xl mb-8">
               <h2 className="text-2xl font-bold text-center mb-6">{gameState.question.text}</h2>
 
               <div className="grid grid-cols-2 gap-4">
                 {gameState.question.choices.map((choice, i) => {
                   const isCorrect = i === gameState.correctIndex;
+                  const teamsWhoChoseThis = gameState.rankings?.filter(r => r.chosenIndex === i) ?? [];
                   return (
-                    <motion.div
-                      key={i}
-                      initial={{ scale: 1 }}
-                      animate={isCorrect ? { scale: [1, 1.05, 1] } : {}}
-                      transition={{ duration: 0.5 }}
-                      className={`rounded-xl p-5 text-white text-xl font-semibold text-center border-2 ${
-                        isCorrect
-                          ? "bg-emerald-500 border-emerald-300 shadow-lg shadow-emerald-500/30"
-                          : "bg-red-500/30 border-red-500/30 opacity-60"
-                      }`}
-                    >
-                      {choice}
-                      {isCorrect && <span className="ml-2">&#x2713;</span>}
-                    </motion.div>
+                    <div key={i} className="flex flex-col">
+                      {/* Team avatars above the answer */}
+                      <div className="flex flex-wrap gap-1 mb-2 min-h-[36px] justify-center">
+                        {teamsWhoChoseThis.map(team => (
+                          <motion.div
+                            key={team.teamId}
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: 0.3 }}
+                            title={team.teamName}
+                            className="relative"
+                          >
+                            {team.photoUrl ? (
+                              <img
+                                src={team.photoUrl}
+                                alt={team.teamName}
+                                className={`w-8 h-8 rounded-full object-cover border-2 ${isCorrect ? "border-emerald-400" : "border-red-400"}`}
+                              />
+                            ) : (
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 ${isCorrect ? "border-emerald-400 bg-emerald-500/30" : "border-red-400 bg-red-500/30"}`}>
+                                {team.teamName.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      <motion.div
+                        initial={{ scale: 1 }}
+                        animate={isCorrect ? { scale: [1, 1.05, 1] } : {}}
+                        transition={{ duration: 0.5 }}
+                        className={`rounded-xl p-5 text-white text-xl font-semibold text-center border-2 ${
+                          isCorrect
+                            ? "bg-emerald-500 border-emerald-300 shadow-lg shadow-emerald-500/30"
+                            : "bg-red-500/30 border-red-500/30 opacity-60"
+                        }`}
+                      >
+                        {choice}
+                        {isCorrect && <span className="ml-2">&#x2713;</span>}
+                      </motion.div>
+                    </div>
                   );
                 })}
               </div>
+
+              {/* Teams that didn't answer */}
+              {(() => {
+                const abstained = gameState.rankings?.filter(r => r.chosenIndex === null) ?? [];
+                if (abstained.length === 0) return null;
+                return (
+                  <div className="mt-4 text-center">
+                    <span className="text-slate-500 text-sm">Non hanno risposto: </span>
+                    <span className="text-slate-400 text-sm">
+                      {abstained.map(t => t.teamName).join(", ")}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
-            {/* Rankings table */}
+            {/* Question ranking (sorted by questionScore) */}
             {gameState.rankings && (
               <div className="max-w-xl w-full bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl mb-6">
-                <h3 className="text-lg font-semibold mb-4 text-center">Classifica</h3>
+                <h3 className="text-lg font-semibold mb-4 text-center text-amber-400">Punteggi domanda</h3>
                 <div className="space-y-2">
-                  {gameState.rankings.map((entry, i) => (
+                  {[...gameState.rankings]
+                    .sort((a, b) => b.questionScore - a.questionScore)
+                    .map((entry, i) => (
                     <motion.div
                       key={entry.teamId}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.1 }}
                       className={`flex items-center gap-3 p-3 rounded-xl ${
-                        entry.isCorrect ? "bg-emerald-500/10 border border-emerald-500/30" : "bg-slate-700/50"
+                        entry.isCorrect ? "bg-emerald-500/10 border border-emerald-500/30"
+                          : entry.isCorrect === false ? "bg-red-500/10 border border-red-500/30"
+                          : "bg-slate-700/50"
                       }`}
                     >
-                      <span className="text-2xl font-bold text-slate-400 w-8">{i + 1}</span>
+                      {entry.photoUrl ? (
+                        <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
+                          {entry.teamName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <span className="flex-1 font-medium">{entry.teamName}</span>
-                      <span className={`text-sm font-mono ${entry.isCorrect ? "text-emerald-400" : "text-red-400"}`}>
-                        +{entry.questionScore}
+                      <span className={`text-lg font-bold font-mono ${
+                        entry.questionScore > 0 ? "text-emerald-400" : entry.questionScore < 0 ? "text-red-400" : "text-slate-400"
+                      }`}>
+                        {entry.questionScore > 0 ? "+" : ""}{entry.questionScore}
                       </span>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Overall ranking (only if NOT last question of the round) */}
+            {gameState.rankings && !gameState.isLastQuestion && (
+              <div className="max-w-xl w-full bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl mb-6">
+                <h3 className="text-lg font-semibold mb-4 text-center text-purple-400">Classifica generale</h3>
+                <div className="space-y-2">
+                  {[...gameState.rankings]
+                    .sort((a, b) => b.totalScore - a.totalScore)
+                    .map((entry, i) => (
+                    <motion.div
+                      key={entry.teamId}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.5 + i * 0.1 }}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50"
+                    >
+                      <span className="text-2xl font-bold text-slate-400 w-8">{i + 1}</span>
+                      {entry.photoUrl ? (
+                        <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
+                          {entry.teamName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <span className="flex-1 font-medium">{entry.teamName}</span>
                       <span className="text-lg font-bold text-purple-400">{entry.totalScore}</span>
                     </motion.div>
                   ))}
@@ -341,11 +559,12 @@ export default function HostPage({ params }: Props) {
               </div>
             )}
 
+            {/* Next question button — fixed top-right */}
             <button
               onClick={handleNextQuestion}
-              className="px-8 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-lg shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all"
+              className="fixed top-4 right-4 z-50 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-base shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all"
             >
-              Prossima domanda
+              {gameState.isLastQuestion ? "Classifica finale →" : "Prossima domanda →"}
             </button>
           </motion.div>
         )}
@@ -357,8 +576,12 @@ export default function HostPage({ params }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col items-center justify-center p-8 cursor-pointer select-none"
-            onClick={handleRevealNext}
+            className="flex-1 flex flex-col items-center justify-center p-8 select-none"
+            onClick={() => {
+              const allRevealed = gameState.rankings && revealedEntries.length >= gameState.rankings.length;
+              if (!allRevealed) handleRevealNext();
+            }}
+            style={{ cursor: gameState.rankings && revealedEntries.length >= gameState.rankings.length ? "default" : "pointer" }}
           >
             <motion.h1
               initial={{ scale: 0.8, opacity: 0 }}
@@ -371,7 +594,8 @@ export default function HostPage({ params }: Props) {
             <div className="max-w-xl w-full space-y-4">
               <AnimatePresence>
                 {revealedEntries.map((entry, i) => {
-                  const position = revealedEntries.length - i;
+                  const totalTeams = gameState.rankings?.length ?? 0;
+                  const position = totalTeams - revealedEntries.length + 1 + i;
                   const isFirst = position === 1;
                   const isSecond = position === 2;
                   const isThird = position === 3;
@@ -417,6 +641,21 @@ export default function HostPage({ params }: Props) {
 
             {revealedEntries.length > 0 && gameState.rankings && revealedEntries.length < gameState.rankings.length && (
               <p className="text-slate-500 text-sm mt-8 animate-pulse">Clicca per la prossima posizione...</p>
+            )}
+
+            {gameState.rankings && revealedEntries.length >= gameState.rankings.length && (
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNextQuestion();
+                }}
+                className="mt-8 px-8 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-lg shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all"
+              >
+                {gameState.currentRound >= gameState.totalRounds ? "Classifica finale" : `Manche ${gameState.currentRound + 1}`}
+              </motion.button>
             )}
           </motion.div>
         )}

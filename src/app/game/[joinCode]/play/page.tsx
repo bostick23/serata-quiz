@@ -6,6 +6,24 @@ import { useGameState } from "@/hooks/use-game-state";
 import { useCountdown } from "@/hooks/use-countdown";
 import { motion, AnimatePresence } from "framer-motion";
 
+const categoryIcons: Record<string, string> = {
+  "Geografia": "🌍",
+  "Storia": "📜",
+  "Scienza": "🔬",
+  "Sport": "⚽",
+  "Cinema e TV": "🎬",
+  "Musica": "🎵",
+  "Cucina": "🍝",
+  "Letteratura": "📚",
+  "Natura": "🌿",
+  "Tecnologia": "💻",
+  "Arte": "🎨",
+};
+
+function getCategoryIcon(category: string): string {
+  return categoryIcons[category] ?? "❓";
+}
+
 interface Props {
   params: Promise<{ joinCode: string }>;
 }
@@ -80,12 +98,31 @@ export default function PlayPage({ params }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Convert to data URL for simplicity
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPhotoUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    // Compress and resize to max 128px, JPEG quality 0.6
+    const compressed = await compressImage(file, 128, 0.6);
+    setPhotoUrl(compressed);
+  }
+
+  function compressImage(file: File, maxSize: number, quality: number): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let w = img.width;
+        let h = img.height;
+        if (w > h) {
+          if (w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; }
+        } else {
+          if (h > maxSize) { w = Math.round(w * maxSize / h); h = maxSize; }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = URL.createObjectURL(file);
+    });
   }
 
   const myRanking = gameState.rankings?.find((r) => r.teamId === myTeamId);
@@ -208,6 +245,45 @@ export default function PlayPage({ params }: Props) {
           </motion.div>
         )}
 
+        {/* CATEGORY PHASE */}
+        {joined && gameState.phase === "category" && gameState.categoryName && (
+          <motion.div
+            key="category"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-center p-4"
+          >
+            <div className="text-slate-400 text-sm mb-4">
+              Manche {gameState.currentRound} - Domanda {gameState.currentQuestion}/{gameState.questionsPerRound}
+            </div>
+
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+              className="text-7xl mb-4"
+            >
+              {getCategoryIcon(gameState.categoryName)}
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-3xl font-extrabold text-center gradient-text mb-6"
+            >
+              {gameState.categoryName}
+            </motion.h1>
+
+            <div className={`text-4xl font-bold font-mono ${seconds <= 2 ? "text-red-500 animate-pulse" : "text-slate-500"}`}>
+              {seconds}
+            </div>
+
+            <p className="text-slate-400 mt-4 animate-pulse">Preparati...</p>
+          </motion.div>
+        )}
+
         {/* READ PHASE */}
         {joined && gameState.phase === "read" && gameState.question && (
           <motion.div
@@ -317,7 +393,7 @@ export default function PlayPage({ params }: Props) {
                 </h2>
 
                 <p className="text-3xl font-bold text-purple-400 mb-1">
-                  +{myRanking.questionScore}
+                  {myRanking.questionScore > 0 ? "+" : ""}{myRanking.questionScore}
                 </p>
                 <p className="text-slate-400 mb-6">
                   Totale: {myRanking.totalScore} punti

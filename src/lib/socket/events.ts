@@ -23,5 +23,6 @@ export const EVENTS = {
   ERROR: "error",
 } as const;
 
+export const CATEGORY_TIME_MS = 5000;
 export const READ_TIME_MS = 10000;
 export const ANSWER_TIME_MS = 10000;

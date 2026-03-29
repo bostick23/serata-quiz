@@ -3,7 +3,7 @@ import { eq, and, sql, isNull, or } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { games, gameQuestions, questions, teams, answers } from "@/lib/db/schema";
 import { calculateScore } from "./scoring";
-import { READ_TIME_MS, ANSWER_TIME_MS } from "./events";
+import { CATEGORY_TIME_MS, READ_TIME_MS, ANSWER_TIME_MS } from "./events";
 import type { GamePhase, QuestionData, RankingEntry, TeamInfo } from "@/types/game";
 
 interface ActiveGame {
@@ -11,6 +11,7 @@ interface ActiveGame {
   gameId: string;
   hostId: string;
   hostSocketId: string | null;
+  language: string;
   phase: GamePhase;
   currentRound: number;
   currentQuestionIndex: number;
@@ -54,6 +55,7 @@ export async function createActiveGame(joinCode: string, gameId: string, hostId:
     gameId,
     hostId,
     hostSocketId: null,
+    language: game.language ?? "it",
     phase: "lobby",
     currentRound: 0,
     currentQuestionIndex: 0,
@@ -98,6 +100,7 @@ function getGameState(game: ActiveGame) {
   return {
     joinCode: game.joinCode,
     phase: game.phase,
+    language: game.language,
     currentRound: game.currentRound,
     currentQuestion: game.currentQuestionIndex,
     totalRounds: game.totalRounds,
@@ -247,6 +250,37 @@ export function setupSocketHandlers(io: Server) {
       }).onConflictDoNothing();
 
       io.to(getRoomName(joinCode)).emit("answer:received", { teamId });
+
+      // All teams answered? Skip timer and show results immediately
+      if (game.answeredTeams.size >= game.teams.size) {
+        if (game.timer) {
+          clearTimeout(game.timer);
+          game.timer = null;
+        }
+        game.phase = "results";
+        const currentQ = game.questionsList[game.currentQuestionIndex - 1];
+        const rankings = await computeQuestionRankings(game, currentQ.gameQuestionId);
+
+        const currentRoundQuestions = game.questionsList.filter(qq => qq.roundNumber === game.currentRound);
+        const isLastQuestion = game.currentQuestionIndex >= currentRoundQuestions.length;
+
+        io.to(getRoomName(joinCode)).emit("question:results", {
+          rankings,
+          correctIndex: game.currentCorrectIndex,
+          isLastQuestion,
+        });
+
+        if (isLastQuestion) {
+          game.phase = "round-end";
+          const overallRankings = await computeOverallRankings(game);
+          game.roundRankings = overallRankings;
+          game.revealedPositions = 0;
+          io.to(getRoomName(joinCode)).emit("round:end", {
+            round: game.currentRound,
+            rankings: overallRankings,
+          });
+        }
+      }
     });
 
     socket.on("reveal:next", async ({ joinCode }) => {
@@ -343,6 +377,7 @@ async function loadAndShowQuestion(io: Server, game: ActiveGame) {
 
   game.currentQuestion = {
     gameQuestionId: q.gameQuestionId,
+    category: questionData.category ?? "Generale",
     text: questionData.text,
     choices: questionData.choices,
     roundNumber: game.currentRound,
@@ -354,43 +389,60 @@ async function loadAndShowQuestion(io: Server, game: ActiveGame) {
 
   await db.update(gameQuestions).set({ startedAt: new Date() }).where(eq(gameQuestions.id, q.gameQuestionId));
 
-  const readDeadline = Date.now() + READ_TIME_MS;
-  io.to(getRoomName(game.joinCode)).emit("question:show", {
-    question: game.currentQuestion,
-    phase: "read",
-    deadline: readDeadline,
+  // Phase 1: Show category for 5 seconds
+  game.phase = "category";
+  const categoryDeadline = Date.now() + CATEGORY_TIME_MS;
+  io.to(getRoomName(game.joinCode)).emit("question:category", {
+    category: game.currentQuestion.category,
+    questionNumber: game.currentQuestionIndex,
+    totalQuestions: roundQuestions.length,
+    roundNumber: game.currentRound,
+    deadline: categoryDeadline,
   });
 
   game.timer = setTimeout(() => {
-    game.phase = "answer";
-    game.answerPhaseStart = Date.now();
-    const answerDeadline = Date.now() + ANSWER_TIME_MS;
-    io.to(getRoomName(game.joinCode)).emit("question:answer-phase", { deadline: answerDeadline });
+    // Phase 2: Show question text for 10 seconds
+    game.phase = "read";
+    const readDeadline = Date.now() + READ_TIME_MS;
+    io.to(getRoomName(game.joinCode)).emit("question:show", {
+      question: game.currentQuestion!,
+      phase: "read",
+      deadline: readDeadline,
+    });
 
-    game.timer = setTimeout(async () => {
-      game.phase = "results";
-      const rankings = await computeQuestionRankings(game, q.gameQuestionId);
+      // Phase 3: Answer phase for 10 seconds
+      game.timer = setTimeout(() => {
+        game.phase = "answer";
+        game.answerPhaseStart = Date.now();
+        const answerDeadline = Date.now() + ANSWER_TIME_MS;
+        io.to(getRoomName(game.joinCode)).emit("question:answer-phase", { deadline: answerDeadline });
 
-      io.to(getRoomName(game.joinCode)).emit("question:results", {
-        rankings,
-        correctIndex: game.currentCorrectIndex,
-      });
+        game.timer = setTimeout(async () => {
+          game.phase = "results";
+          const rankings = await computeQuestionRankings(game, q.gameQuestionId);
 
-      const currentRoundQuestions = game.questionsList.filter(qq => qq.roundNumber === game.currentRound);
-      const isLastQuestion = game.currentQuestionIndex >= currentRoundQuestions.length;
+          const currentRoundQuestions = game.questionsList.filter(qq => qq.roundNumber === game.currentRound);
+          const isLastQuestion = game.currentQuestionIndex >= currentRoundQuestions.length;
 
-      if (isLastQuestion) {
-        game.phase = "round-end";
-        const overallRankings = await computeOverallRankings(game);
-        game.roundRankings = overallRankings;
-        game.revealedPositions = 0;
-        io.to(getRoomName(game.joinCode)).emit("round:end", {
-          round: game.currentRound,
-          rankings: overallRankings,
-        });
-      }
-    }, ANSWER_TIME_MS);
-  }, READ_TIME_MS);
+          io.to(getRoomName(game.joinCode)).emit("question:results", {
+            rankings,
+            correctIndex: game.currentCorrectIndex,
+            isLastQuestion,
+          });
+
+          if (isLastQuestion) {
+            game.phase = "round-end";
+            const overallRankings = await computeOverallRankings(game);
+            game.roundRankings = overallRankings;
+            game.revealedPositions = 0;
+            io.to(getRoomName(game.joinCode)).emit("round:end", {
+              round: game.currentRound,
+              rankings: overallRankings,
+            });
+          }
+        }, ANSWER_TIME_MS);
+      }, READ_TIME_MS);
+    }, CATEGORY_TIME_MS);
 }
 
 async function computeQuestionRankings(game: ActiveGame, gameQuestionId: string): Promise<RankingEntry[]> {
@@ -423,6 +475,7 @@ async function computeQuestionRankings(game: ActiveGame, gameQuestionId: string)
       questionScore: answer?.score ?? 0,
       totalScore: totalScoreMap.get(team.id) ?? 0,
       isCorrect: answer ? answer.chosenIndex === game.currentCorrectIndex : null,
+      chosenIndex: answer?.chosenIndex ?? null,
     };
   });
 
@@ -452,6 +505,7 @@ async function computeOverallRankings(game: ActiveGame): Promise<RankingEntry[]>
     questionScore: 0,
     totalScore: totalScoreMap.get(team.id) ?? 0,
     isCorrect: null,
+    chosenIndex: null,
   }));
 
   rankings.sort((a, b) => b.totalScore - a.totalScore);

@@ -5,10 +5,11 @@ export interface ServerToClientEvents {
   "team:left": (data: { teamId: string; teamName: string }) => void;
   "game:started": (data: { totalRounds: number; questionsPerRound: number }) => void;
   "game:state": (data: GameState) => void;
+  "question:category": (data: { category: string; questionNumber: number; totalQuestions: number; roundNumber: number; deadline: number }) => void;
   "question:show": (data: { question: QuestionData; phase: "read"; deadline: number }) => void;
   "question:answer-phase": (data: { deadline: number }) => void;
   "answer:received": (data: { teamId: string }) => void;
-  "question:results": (data: { rankings: RankingEntry[]; correctIndex: number }) => void;
+  "question:results": (data: { rankings: RankingEntry[]; correctIndex: number; isLastQuestion: boolean }) => void;
   "round:end": (data: { round: number; rankings: RankingEntry[] }) => void;
   "reveal:position": (data: { position: number; entry: RankingEntry }) => void;
   "game:finished": (data: { rankings: RankingEntry[] }) => void;

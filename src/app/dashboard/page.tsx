@@ -38,6 +38,9 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [loadingGames, setLoadingGames] = useState(true);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -64,16 +67,42 @@ export default function DashboardPage() {
     }
   }, [status]);
 
+  useEffect(() => {
+    if (!showForm) return;
+    async function fetchCategories() {
+      try {
+        const res = await fetch(`/api/questions/categories?language=${language}`);
+        if (res.ok) {
+          const data: string[] = await res.json();
+          setAvailableCategories(data);
+          setSelectedCategories(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      }
+    }
+    fetchCategories();
+  }, [language, showForm]);
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
     setError("");
 
+    if (availableCategories.length > 0 && selectedCategories.length === 0) {
+      setError("Seleziona almeno una categoria nelle opzioni avanzate.");
+      setCreating(false);
+      return;
+    }
+
+    const allSelected = selectedCategories.length === availableCategories.length;
+    const categories = allSelected ? undefined : selectedCategories;
+
     try {
       const res = await fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ numRounds, questionsPerRound, language }),
+        body: JSON.stringify({ numRounds, questionsPerRound, language, categories }),
       });
 
       const data = await res.json();
@@ -89,6 +118,11 @@ export default function DashboardPage() {
     } finally {
       setCreating(false);
     }
+  }
+
+  function handleCancel() {
+    setShowForm(false);
+    setShowAdvancedOptions(false);
   }
 
   if (status === "loading") {
@@ -224,6 +258,84 @@ export default function DashboardPage() {
                     Totale domande necessarie: {numRounds * questionsPerRound}
                   </p>
 
+                  {/* Advanced options */}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                      className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                    >
+                      <span>{showAdvancedOptions ? "▾" : "▸"}</span>
+                      Opzioni avanzate
+                    </button>
+                    <AnimatePresence>
+                      {showAdvancedOptions && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-3 p-4 bg-slate-700/50 rounded-xl border border-slate-600">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-sm font-medium text-slate-300">
+                                Categorie
+                              </span>
+                              <div className="flex gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedCategories(availableCategories)}
+                                  className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                                >
+                                  Seleziona tutte
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedCategories([])}
+                                  className="text-xs text-slate-400 hover:text-slate-300 transition-colors"
+                                >
+                                  Deseleziona tutte
+                                </button>
+                              </div>
+                            </div>
+                            {availableCategories.length === 0 ? (
+                              <p className="text-slate-400 text-sm">
+                                Nessuna categoria disponibile per questa lingua.
+                              </p>
+                            ) : (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {availableCategories.map((cat) => (
+                                  <label
+                                    key={cat}
+                                    className="flex items-center gap-2 cursor-pointer group"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedCategories.includes(cat)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedCategories((prev) => [...prev, cat]);
+                                        } else {
+                                          setSelectedCategories((prev) =>
+                                            prev.filter((c) => c !== cat)
+                                          );
+                                        }
+                                      }}
+                                      className="w-4 h-4 rounded accent-purple-500"
+                                    />
+                                    <span className="text-sm text-slate-300 group-hover:text-white transition-colors truncate">
+                                      {cat}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
                   <div className="flex gap-3">
                     <button
                       type="submit"
@@ -234,7 +346,7 @@ export default function DashboardPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowForm(false)}
+                      onClick={handleCancel}
                       className="px-6 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors"
                     >
                       Annulla

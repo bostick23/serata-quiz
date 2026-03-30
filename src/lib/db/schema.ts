@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, smallint, integer, timestamp, jsonb, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, text, smallint, integer, timestamp, jsonb, pgEnum, uniqueIndex, boolean } from "drizzle-orm/pg-core";
 
 export const userRoleEnum = pgEnum("user_role", ["host", "admin"]);
 export const gameStatusEnum = pgEnum("game_status", ["lobby", "playing", "finished", "cancelled"]);
@@ -9,6 +9,23 @@ export const users = pgTable("users", {
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   displayName: varchar("display_name", { length: 100 }).notNull(),
   role: userRoleEnum("role").default("host").notNull(),
+  emailVerified: boolean("email_verified").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const verificationTokens = pgTable("verification_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  code: varchar("code", { length: 6 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  code: varchar("code", { length: 6 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

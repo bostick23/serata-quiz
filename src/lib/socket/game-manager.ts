@@ -208,7 +208,21 @@ export function setupSocketHandlers(io: Server) {
       const currentRoundQuestions = game.questionsList.filter(q => q.roundNumber === game.currentRound);
       const isLastQuestionInRound = game.currentQuestionIndex >= currentRoundQuestions.length;
 
-      if (isLastQuestionInRound) {
+      // If last question and still in results phase, go to round-end reveal first
+      if (isLastQuestionInRound && game.phase === "results") {
+        game.phase = "round-end";
+        const overallRankings = await computeOverallRankings(game);
+        game.roundRankings = overallRankings;
+        game.revealedPositions = 0;
+        io.to(getRoomName(joinCode)).emit("round:end", {
+          round: game.currentRound,
+          rankings: overallRankings,
+        });
+        return;
+      }
+
+      // If in round-end (all positions revealed), move to next round or finish
+      if (isLastQuestionInRound && game.phase === "round-end") {
         if (game.currentRound >= game.totalRounds) {
           game.phase = "finished";
           const rankings = await computeOverallRankings(game);
@@ -220,10 +234,13 @@ export function setupSocketHandlers(io: Server) {
         }
         game.currentRound++;
         game.currentQuestionIndex = 1;
-      } else {
-        game.currentQuestionIndex++;
+        game.phase = "read";
+        await loadAndShowQuestion(io, game);
+        return;
       }
 
+      // Not last question — just go to next question
+      game.currentQuestionIndex++;
       game.phase = "read";
       await loadAndShowQuestion(io, game);
     });
@@ -270,16 +287,7 @@ export function setupSocketHandlers(io: Server) {
           isLastQuestion,
         });
 
-        if (isLastQuestion) {
-          game.phase = "round-end";
-          const overallRankings = await computeOverallRankings(game);
-          game.roundRankings = overallRankings;
-          game.revealedPositions = 0;
-          io.to(getRoomName(joinCode)).emit("round:end", {
-            round: game.currentRound,
-            rankings: overallRankings,
-          });
-        }
+        // Don't immediately jump to round-end; let host click "Classifica finale"
       }
     });
 
@@ -430,16 +438,7 @@ async function loadAndShowQuestion(io: Server, game: ActiveGame) {
             isLastQuestion,
           });
 
-          if (isLastQuestion) {
-            game.phase = "round-end";
-            const overallRankings = await computeOverallRankings(game);
-            game.roundRankings = overallRankings;
-            game.revealedPositions = 0;
-            io.to(getRoomName(game.joinCode)).emit("round:end", {
-              round: game.currentRound,
-              rankings: overallRankings,
-            });
-          }
+          // Don't immediately jump to round-end; let host click "Classifica finale"
         }, ANSWER_TIME_MS);
       }, READ_TIME_MS);
     }, CATEGORY_TIME_MS);

@@ -490,72 +490,75 @@ export default function HostPage({ params }: Props) {
               })()}
             </div>
 
-            {/* Question ranking (sorted by questionScore) */}
+            {/* Rankings side by side */}
             {gameState.rankings && (
-              <div className="max-w-xl w-full bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl mb-6">
-                <h3 className="text-lg font-semibold mb-4 text-center text-amber-400">Punteggi domanda</h3>
-                <div className="space-y-2">
-                  {[...gameState.rankings]
-                    .sort((a, b) => b.questionScore - a.questionScore)
-                    .map((entry, i) => (
-                    <motion.div
-                      key={entry.teamId}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      className={`flex items-center gap-3 p-3 rounded-xl ${
-                        entry.isCorrect ? "bg-emerald-500/10 border border-emerald-500/30"
-                          : entry.isCorrect === false ? "bg-red-500/10 border border-red-500/30"
-                          : "bg-slate-700/50"
-                      }`}
-                    >
-                      {entry.photoUrl ? (
-                        <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
-                          {entry.teamName.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <span className="flex-1 font-medium">{entry.teamName}</span>
-                      <span className={`text-lg font-bold font-mono ${
-                        entry.questionScore > 0 ? "text-emerald-400" : entry.questionScore < 0 ? "text-red-400" : "text-slate-400"
-                      }`}>
-                        {entry.questionScore > 0 ? "+" : ""}{entry.questionScore}
-                      </span>
-                    </motion.div>
-                  ))}
+              <div className={`w-full max-w-5xl flex flex-col ${!gameState.isLastQuestion ? "lg:flex-row" : ""} gap-6 mb-6`}>
+                {/* Question ranking (sorted by questionScore) */}
+                <div className="flex-1 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                  <h3 className="text-lg font-semibold mb-4 text-center text-amber-400">Punteggi domanda</h3>
+                  <div className="space-y-2">
+                    {[...gameState.rankings]
+                      .sort((a, b) => b.questionScore - a.questionScore)
+                      .map((entry, i) => (
+                      <motion.div
+                        key={entry.teamId}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        className={`flex items-center gap-3 p-3 rounded-xl ${
+                          entry.isCorrect ? "bg-emerald-500/10 border border-emerald-500/30"
+                            : entry.isCorrect === false ? "bg-red-500/10 border border-red-500/30"
+                            : "bg-slate-700/50"
+                        }`}
+                      >
+                        {entry.photoUrl ? (
+                          <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
+                            {entry.teamName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span className="flex-1 font-medium">{entry.teamName}</span>
+                        <span className={`text-lg font-bold font-mono ${
+                          entry.questionScore > 0 ? "text-emerald-400" : entry.questionScore < 0 ? "text-red-400" : "text-slate-400"
+                        }`}>
+                          {entry.questionScore > 0 ? "+" : ""}{entry.questionScore}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {/* Overall ranking (only if NOT last question of the round) */}
-            {gameState.rankings && !gameState.isLastQuestion && (
-              <div className="max-w-xl w-full bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl mb-6">
-                <h3 className="text-lg font-semibold mb-4 text-center text-purple-400">Classifica generale</h3>
-                <div className="space-y-2">
-                  {[...gameState.rankings]
-                    .sort((a, b) => b.totalScore - a.totalScore)
-                    .map((entry, i) => (
-                    <motion.div
-                      key={entry.teamId}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.5 + i * 0.1 }}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50"
-                    >
-                      <span className="text-2xl font-bold text-slate-400 w-8">{i + 1}</span>
-                      {entry.photoUrl ? (
-                        <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
-                          {entry.teamName.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <span className="flex-1 font-medium">{entry.teamName}</span>
-                      <span className="text-lg font-bold text-purple-400">{entry.totalScore}</span>
-                    </motion.div>
-                  ))}
-                </div>
+                {/* Overall ranking (only if NOT last question of the round) */}
+                {!gameState.isLastQuestion && (
+                  <div className="flex-1 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                    <h3 className="text-lg font-semibold mb-4 text-center text-purple-400">Classifica generale</h3>
+                    <div className="space-y-2">
+                      {[...gameState.rankings]
+                        .sort((a, b) => b.totalScore - a.totalScore)
+                        .map((entry, i) => (
+                        <motion.div
+                          key={entry.teamId}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.5 + i * 0.1 }}
+                          className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50"
+                        >
+                          <span className="text-2xl font-bold text-slate-400 w-8">{i + 1}</span>
+                          {entry.photoUrl ? (
+                            <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
+                              {entry.teamName.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="flex-1 font-medium">{entry.teamName}</span>
+                          <span className="text-lg font-bold text-purple-400">{entry.totalScore}</span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -740,6 +743,16 @@ export default function HostPage({ params }: Props) {
                 );
               })}
             </div>
+
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1 }}
+              onClick={() => window.location.href = "/dashboard"}
+              className="mt-10 px-8 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-lg shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all"
+            >
+              Torna alla Dashboard
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>

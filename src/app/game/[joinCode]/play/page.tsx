@@ -82,6 +82,8 @@ export default function PlayPage({ params }: Props) {
     console.log("[Play] Emitting game:join", { joinCode, teamName: teamName.trim(), connected: socket.connected });
     setJoining(true);
     socket.emit("game:join", { joinCode, teamName: teamName.trim(), photoUrl: photoUrl ?? undefined });
+    // Unblock button after 10s if server never responds
+    setTimeout(() => setJoining(false), 10000);
   }
 
   function handleAnswer(chosenIndex: number) {
@@ -98,28 +100,49 @@ export default function PlayPage({ params }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Compress and resize to max 128px, JPEG quality 0.6
-    const compressed = await compressImage(file, 128, 0.6);
-    setPhotoUrl(compressed);
+    try {
+      const compressed = await compressImage(file, 128, 0.6);
+      setPhotoUrl(compressed);
+    } catch (err) {
+      console.error("[Play] Photo compression failed:", err);
+      // Continue without photo rather than blocking
+      setPhotoUrl(null);
+    }
   }
 
   function compressImage(file: File, maxSize: number, quality: number): Promise<string> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      // Timeout: if compression takes >5s (iOS HEIC decoding issues), reject
+      const timeout = setTimeout(() => reject(new Error("Compression timeout")), 5000);
+
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement("canvas");
-        let w = img.width;
-        let h = img.height;
-        if (w > h) {
-          if (w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; }
-        } else {
-          if (h > maxSize) { w = Math.round(w * maxSize / h); h = maxSize; }
+        clearTimeout(timeout);
+        try {
+          const canvas = document.createElement("canvas");
+          let w = img.width;
+          let h = img.height;
+          if (w > h) {
+            if (w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; }
+          } else {
+            if (h > maxSize) { w = Math.round(w * maxSize / h); h = maxSize; }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) { reject(new Error("Canvas not supported")); return; }
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL("image/jpeg", quality);
+          URL.revokeObjectURL(img.src);
+          resolve(dataUrl);
+        } catch (err) {
+          reject(err);
         }
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => {
+        clearTimeout(timeout);
+        URL.revokeObjectURL(img.src);
+        reject(new Error("Failed to load image"));
       };
       img.src = URL.createObjectURL(file);
     });

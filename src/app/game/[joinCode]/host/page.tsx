@@ -6,50 +6,7 @@ import { useGameState } from "@/hooks/use-game-state";
 import { useCountdown } from "@/hooks/use-countdown";
 import { motion, AnimatePresence } from "framer-motion";
 import type { RankingEntry } from "@/types/game";
-
-const categoryIcons: Record<string, string> = {
-  // Italian
-  "Geografia": "🌍",
-  "Storia": "📜",
-  "Scienza": "🔬",
-  "Sport": "⚽",
-  "Cinema e TV": "🎬",
-  "Musica": "🎵",
-  "Cucina": "🍝",
-  "Letteratura": "📚",
-  "Natura": "🌿",
-  "Tecnologia": "💻",
-  "Arte": "🎨",
-  // English (OpenTDB)
-  "General Knowledge": "🧠",
-  "Entertainment: Books": "📚",
-  "Entertainment: Film": "🎬",
-  "Entertainment: Music": "🎵",
-  "Entertainment: Musicals & Theatres": "🎭",
-  "Entertainment: Television": "📺",
-  "Entertainment: Video Games": "🎮",
-  "Entertainment: Board Games": "🎲",
-  "Science & Nature": "🔬",
-  "Science: Computers": "💻",
-  "Science: Mathematics": "🔢",
-  "Science: Gadgets": "📱",
-  "Mythology": "⚡",
-  "Sports": "⚽",
-  "Geography": "🌍",
-  "History": "📜",
-  "Politics": "🏛️",
-  "Art": "🎨",
-  "Celebrities": "⭐",
-  "Animals": "🐾",
-  "Vehicles": "🚗",
-  "Entertainment: Comics": "💥",
-  "Entertainment: Japanese Anime & Manga": "🎌",
-  "Entertainment: Cartoon & Animations": "🖍️",
-};
-
-function getCategoryIcon(category: string): string {
-  return categoryIcons[category] ?? "❓";
-}
+import { getCategoryImage } from "@/lib/category-images";
 
 interface Props {
   params: Promise<{ joinCode: string }>;
@@ -311,9 +268,13 @@ export default function HostPage({ params }: Props) {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
-              className="text-8xl mb-6"
+              className="mb-6"
             >
-              {getCategoryIcon(gameState.categoryName)}
+              <img
+                src={getCategoryImage(gameState.categoryName)}
+                alt={gameState.categoryName}
+                className="w-32 h-32"
+              />
             </motion.div>
 
             <motion.h1

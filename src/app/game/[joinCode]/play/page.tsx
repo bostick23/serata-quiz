@@ -5,24 +5,7 @@ import { useSocket } from "@/hooks/use-socket";
 import { useGameState } from "@/hooks/use-game-state";
 import { useCountdown } from "@/hooks/use-countdown";
 import { motion, AnimatePresence } from "framer-motion";
-
-const categoryIcons: Record<string, string> = {
-  "Geografia": "🌍",
-  "Storia": "📜",
-  "Scienza": "🔬",
-  "Sport": "⚽",
-  "Cinema e TV": "🎬",
-  "Musica": "🎵",
-  "Cucina": "🍝",
-  "Letteratura": "📚",
-  "Natura": "🌿",
-  "Tecnologia": "💻",
-  "Arte": "🎨",
-};
-
-function getCategoryIcon(category: string): string {
-  return categoryIcons[category] ?? "❓";
-}
+import { getCategoryImage } from "@/lib/category-images";
 
 interface Props {
   params: Promise<{ joinCode: string }>;
@@ -285,9 +268,13 @@ export default function PlayPage({ params }: Props) {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
-              className="text-7xl mb-4"
+              className="mb-4"
             >
-              {getCategoryIcon(gameState.categoryName)}
+              <img
+                src={getCategoryImage(gameState.categoryName)}
+                alt={gameState.categoryName}
+                className="w-24 h-24"
+              />
             </motion.div>
 
             <motion.h1

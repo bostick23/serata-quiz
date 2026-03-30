@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import { Providers } from "./providers";
+import { CookieConsent } from "@/components/cookie-consent";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,6 +32,18 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-slate-900 text-white">
         <Providers>{children}</Providers>
+        <footer className="mt-auto border-t border-slate-800 py-4 px-6 text-center text-slate-500 text-xs">
+          <p>
+            © {new Date().getFullYear()} Serata Quiz &mdash;{" "}
+            <Link
+              href="/privacy-policy"
+              className="hover:text-slate-300 underline transition-colors"
+            >
+              Privacy Policy
+            </Link>
+          </p>
+        </footer>
+        <CookieConsent />
       </body>
     </html>
   );

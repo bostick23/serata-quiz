@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Speech bubble -->
+  <path d="M 10 15 Q 10 8 18 8 L 82 8 Q 90 8 90 15 L 90 58 Q 90 65 82 65 L 45 65 L 30 82 L 33 65 L 18 65 Q 10 65 10 58 Z" fill="#FEF08A" stroke="#D97706" stroke-width="3"/>
+  <!-- Burst lines (comic effect) -->
+  <text x="50" y="48" font-family="Arial" font-size="32" font-weight="bold" fill="#EF4444" text-anchor="middle">POW!</text>
+</svg>

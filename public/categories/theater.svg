@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Happy mask -->
+  <ellipse cx="30" cy="45" rx="20" ry="25" fill="#FCD34D" stroke="#D97706" stroke-width="2"/>
+  <circle cx="24" cy="40" r="3" fill="#D97706"/>
+  <circle cx="36" cy="40" r="3" fill="#D97706"/>
+  <path d="M 22 52 Q 30 60 38 52" fill="none" stroke="#D97706" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Sad mask -->
+  <ellipse cx="70" cy="55" rx="20" ry="25" fill="#93C5FD" stroke="#2563EB" stroke-width="2"/>
+  <circle cx="64" cy="50" r="3" fill="#2563EB"/>
+  <circle cx="76" cy="50" r="3" fill="#2563EB"/>
+  <path d="M 62 62 Q 70 55 78 62" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

@@ -497,12 +497,12 @@ const quizQuestions = [
   // Cartoni Animati
   { category: "Cartoni Animati", text: "Qual è il nome del leopardo delle nevi antagonista in Kung Fu Panda?", choices: ["Shen", "Tai Lung", "Kai", "Temutai"], correctIndex: 1 },
   { category: "Cartoni Animati", text: "In quale città vive la famiglia Simpsons?", choices: ["Shelbyville", "Springfield", "Ogdenville", "Capital City"], correctIndex: 1 },
-  { category: "Cartoni Animati", text: "Come si chiama il pesce pagliaccio protagonista di 'Alla ricerca di Nemo'?", choices: ["Dory", "Nemo", "Marlin", "Gill"], correctIndex: 1 },
+  { category: "Cartoni Animati", text: "In 'Alla ricerca di Nemo', in quale città australiana si trova la dentisteria dove viene portato il protagonista?", choices: ["Melbourne", "Sydney", "Brisbane", "Perth"], correctIndex: 1 },
   { category: "Cartoni Animati", text: "In 'Il Re Leone', chi è lo zio malvagio di Simba?", choices: ["Mufasa", "Scar", "Shenzi", "Banzai"], correctIndex: 1 },
   { category: "Cartoni Animati", text: "Come si chiama il cowboy protagonista di Toy Story?", choices: ["Buzz", "Woody", "Rex", "Hamm"], correctIndex: 1 },
   { category: "Cartoni Animati", text: "Di quale studio è personaggio Bugs Bunny?", choices: ["Disney", "Pixar", "Warner Bros.", "DreamWorks"], correctIndex: 2 },
   { category: "Cartoni Animati", text: "In 'Shrek', da quale fata viene trasformata la principessa Fiona ogni notte?", choices: ["Una strega", "Un orco", "Una bestia", "Nessuno la trasforma, è una maledizione"], correctIndex: 3 },
-  { category: "Cartoni Animati", text: "Come si chiama il robot protagonista del film 'WALL-E'?", choices: ["EVE", "WALL-E", "AUTO", "M-O"], correctIndex: 1 },
+  { category: "Cartoni Animati", text: "In 'WALL-E', qual è il compito che il robot protagonista svolge sulla Terra abbandonata?", choices: ["Proteggere gli edifici", "Comprimere i rifiuti", "Coltivare piante", "Costruire strade"], correctIndex: 1 },
   { category: "Cartoni Animati", text: "In 'Frozen', qual è il potere speciale di Elsa?", choices: ["Controllare il vento", "Creare il fuoco", "Controllare il ghiaccio e la neve", "Leggere nel pensiero"], correctIndex: 2 },
   { category: "Cartoni Animati", text: "Come si chiama il vecchio che vola con la casa in 'Up'?", choices: ["Carl Fredricksen", "Russell", "Charles Muntz", "Dug"], correctIndex: 0 },
   { category: "Cartoni Animati", text: "In 'Ratatouille', qual è il nome del topo che vuole diventare chef?", choices: ["Emile", "Django", "Remy", "Gusteau"], correctIndex: 2 },
@@ -510,7 +510,7 @@ const quizQuestions = [
   { category: "Cartoni Animati", text: "In 'Coco', qual è la passione del protagonista Miguel?", choices: ["La pittura", "La danza", "La musica", "La cucina"], correctIndex: 2 },
   { category: "Cartoni Animati", text: "Come si chiama la strega cattiva in 'La Sirenetta'?", choices: ["Malefica", "Ursula", "Crudelia", "Grimilde"], correctIndex: 1 },
   { category: "Cartoni Animati", text: "In 'Cars', qual è il numero di gara di Saetta McQueen?", choices: ["86", "95", "77", "42"], correctIndex: 1 },
-  { category: "Cartoni Animati", text: "Come si chiama il protagonista di 'Mulan'?", choices: ["Jasmine", "Pocahontas", "Fa Mulan", "Moana"], correctIndex: 2 },
+  { category: "Cartoni Animati", text: "In 'Mulan', come si chiama il piccolo drago guardiano della famiglia protagonista?", choices: ["Long", "Cri-Kee", "Mushu", "Shang"], correctIndex: 2 },
   { category: "Cartoni Animati", text: "In 'Gli Incredibili', qual è il superpotere di Violet?", choices: ["Super forza", "Velocità", "Campo di forza e invisibilità", "Elasticità"], correctIndex: 2 },
   { category: "Cartoni Animati", text: "Come si chiama la mamma di Bambi?", choices: ["Non viene mai nominata", "Faline", "Fiore", "Thumper"], correctIndex: 0 },
   { category: "Cartoni Animati", text: "In 'Zootropolis', che lavoro fa la coniglietta Judy Hopps?", choices: ["Veterinaria", "Insegnante", "Poliziotta", "Barista"], correctIndex: 2 },
@@ -529,7 +529,7 @@ const quizQuestions = [
   { category: "Cartoni Animati", text: "Qual è il nome della protagonista di 'Ribelle - The Brave'?", choices: ["Ariel", "Merida", "Aurora", "Rapunzel"], correctIndex: 1 },
   { category: "Cartoni Animati", text: "In 'Minions', a chi erano fedeli i minion prima di Gru?", choices: ["Napoleon Bonaparte", "Drago Mantico", "Vampiro Dracula", "Il Faraone"], correctIndex: 0 },
   { category: "Cartoni Animati", text: "Come si chiama il cane di Paperino?", choices: ["Pluto", "Fifi", "Boule", "Non ha un cane"], correctIndex: 1 },
-  { category: "Cartoni Animati", text: "In 'Tom e Jerry', chi è sempre il più furbo alla fine?", choices: ["Tom", "Jerry", "Dipende dall'episodio", "Butch"], correctIndex: 1 },
+  { category: "Cartoni Animati", text: "In 'Tom e Jerry', di che colore è il gatto Tom?", choices: ["Nero", "Arancione", "Grigio", "Marrone"], correctIndex: 2 },
   { category: "Cartoni Animati", text: "Come si chiama il protagonista di 'Spirited Away - La città incantata'?", choices: ["Totoro", "Chihiro", "Kiki", "San"], correctIndex: 1 },
   { category: "Cartoni Animati", text: "In 'Avatar - La leggenda di Aang', qual è il primo elemento che Aang impara a padroneggiare oltre all'aria?", choices: ["Fuoco", "Terra", "Acqua", "Fulmine"], correctIndex: 2 },
   { category: "Cartoni Animati", text: "Qual è il nome del villain di 'Aladdin'?", choices: ["Razoul", "Jafar", "Gazeem", "Iago"], correctIndex: 1 },
@@ -544,7 +544,7 @@ const quizQuestions = [
   { category: "Cartoni Animati", text: "In 'Zootopia', di quale animale è fatta la città di Zootopia?", choices: ["Solo mammiferi", "Solo rettili", "Tutti gli animali", "Solo animali domestici"], correctIndex: 0 },
   { category: "Cartoni Animati", text: "Come si chiama il protagonista umano de 'Il gigante di ferro'?", choices: ["Charlie", "Hogarth", "Dean", "Kent"], correctIndex: 1 },
   { category: "Cartoni Animati", text: "In 'Kung Fu Panda 2', chi è il villain principale?", choices: ["Tai Lung", "Lord Shen", "Kai", "Temutai"], correctIndex: 1 },
-  { category: "Cartoni Animati", text: "Qual è il nome del protagonista di 'Megamind'?", choices: ["Metro Man", "Roxanne", "Megamind", "Minion"], correctIndex: 2 },
+  { category: "Cartoni Animati", text: "In 'Megamind', qual è il superpotere principale del villain dalla testa enorme blu che poi diventa eroe?", choices: ["Super forza", "Super intelligenza", "Volo", "Invisibilità"], correctIndex: 1 },
 ];
 
 async function seed() {

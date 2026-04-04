@@ -11,6 +11,7 @@ const categoryImages: Record<string, string> = {
   "Natura": "/categories/nature.svg",
   "Tecnologia": "/categories/technology.svg",
   "Arte": "/categories/art.svg",
+  "Cartoni Animati": "/categories/cartoon.svg",
   // English (OpenTDB)
   "General Knowledge": "/categories/brain.svg",
   "Entertainment: Books": "/categories/book.svg",

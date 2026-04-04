@@ -545,6 +545,132 @@ const quizQuestions = [
   { category: "Cartoni Animati", text: "Come si chiama il protagonista umano de 'Il gigante di ferro'?", choices: ["Charlie", "Hogarth", "Dean", "Kent"], correctIndex: 1 },
   { category: "Cartoni Animati", text: "In 'Kung Fu Panda 2', chi è il villain principale?", choices: ["Tai Lung", "Lord Shen", "Kai", "Temutai"], correctIndex: 1 },
   { category: "Cartoni Animati", text: "In 'Megamind', qual è il superpotere principale del villain dalla testa enorme blu che poi diventa eroe?", choices: ["Super forza", "Super intelligenza", "Volo", "Invisibilità"], correctIndex: 1 },
+
+  // ===== ALTRE 100 DOMANDE (terza tranche) =====
+
+  // Sport (15)
+  { category: "Sport", text: "Chi ha vinto 5 mondiali di fila nella classe 500 del motomondiale negli anni '90?", choices: ["Valentino Rossi", "Giacomo Agostini", "Max Biaggi", "Mick Doohan"], correctIndex: 3 },
+  { category: "Sport", text: "In quale città si trova l'Autodromo Enzo e Dino Ferrari?", choices: ["Monza", "Mugello", "Imola", "Vallelunga"], correctIndex: 2 },
+  { category: "Sport", text: "Qual è la distanza ufficiale di una maratona?", choices: ["40 km", "41 km", "42,195 km", "43 km"], correctIndex: 2 },
+  { category: "Sport", text: "In quale sport si compete per la Coppa Davis?", choices: ["Golf", "Tennis", "Polo", "Nuoto"], correctIndex: 1 },
+  { category: "Sport", text: "Quale nazionale ha vinto il Campionato Europeo di calcio del 2020 (disputato nel 2021)?", choices: ["Francia", "Spagna", "Inghilterra", "Italia"], correctIndex: 3 },
+  { category: "Sport", text: "Chi detiene il record mondiale dei 100 metri piani maschili?", choices: ["Carl Lewis", "Maurice Greene", "Usain Bolt", "Justin Gatlin"], correctIndex: 2 },
+  { category: "Sport", text: "In quale sport si pratica il 'fioretto'?", choices: ["Boxe", "Judo", "Scherma", "Lotta"], correctIndex: 2 },
+  { category: "Sport", text: "Quante volte l'Italia ha vinto il Campionato del Mondo di calcio?", choices: ["3", "4", "5", "6"], correctIndex: 1 },
+  { category: "Sport", text: "Quale città italiana ha ospitato i Giochi Olimpici estivi nel 1960?", choices: ["Milano", "Torino", "Roma", "Napoli"], correctIndex: 2 },
+  { category: "Sport", text: "In quale sport si usa il termine 'birdie'?", choices: ["Tennis", "Sci", "Golf", "Cricket"], correctIndex: 2 },
+  { category: "Sport", text: "Chi è l'unico ciclista ad aver vinto 5 Tour de France consecutivi?", choices: ["Eddy Merckx", "Bernard Hinault", "Miguel Indurain", "Lance Armstrong"], correctIndex: 2 },
+  { category: "Sport", text: "In quale sport si svolge la gara chiamata 'volata'?", choices: ["Nuoto", "Atletica leggera", "Ciclismo su strada", "Canottaggio"], correctIndex: 2 },
+  { category: "Sport", text: "Quale nazionale ha vinto il primo Campionato del Mondo di calcio FIFA nel 1930?", choices: ["Argentina", "Brasile", "Uruguay", "Italia"], correctIndex: 2 },
+  { category: "Sport", text: "In quale sport si compete per la Coppa America, la più antica trofeo sportivo internazionale?", choices: ["Vela", "Tennis", "Rugby", "Polo"], correctIndex: 0 },
+  { category: "Sport", text: "Qual è la lunghezza standard di una piscina olimpica di nuoto?", choices: ["25 m", "33 m", "50 m", "100 m"], correctIndex: 2 },
+
+  // Storia (12)
+  { category: "Storia", text: "In quale anno Costantinopoli cadde sotto l'Impero Ottomano?", choices: ["1380", "1417", "1453", "1492"], correctIndex: 2 },
+  { category: "Storia", text: "Su quale isola fu esiliato Napoleone Bonaparte dopo la sconfitta di Waterloo?", choices: ["Corsica", "Elba", "Capri", "Sant'Elena"], correctIndex: 3 },
+  { category: "Storia", text: "In quale anno fu firmato il Trattato di Roma che istituì la Comunità Economica Europea?", choices: ["1945", "1951", "1957", "1963"], correctIndex: 2 },
+  { category: "Storia", text: "Chi guidò la Rivoluzione Cubana del 1959?", choices: ["Che Guevara", "Camilo Cienfuegos", "Raúl Castro", "Fidel Castro"], correctIndex: 3 },
+  { category: "Storia", text: "Quale evento scatenò l'inizio della Prima Guerra Mondiale?", choices: ["Invasione della Polonia", "L'assassinio dell'arciduca Francesco Ferdinando", "L'affondamento del Lusitania", "La Rivoluzione Russa"], correctIndex: 1 },
+  { category: "Storia", text: "In quale anno entrò in vigore la Costituzione della Repubblica Italiana?", choices: ["1945", "1946", "1948", "1950"], correctIndex: 2 },
+  { category: "Storia", text: "Chi erano i due principali candidati alle elezioni presidenziali degli USA del 1996?", choices: ["Clinton e Bush", "Clinton e Dole", "Bush e Gore", "Clinton e Perot"], correctIndex: 1 },
+  { category: "Storia", text: "Quale civiltà costruì la città di Machu Picchu?", choices: ["Aztechi", "Maya", "Inca", "Olmechi"], correctIndex: 2 },
+  { category: "Storia", text: "In quale anno avvenne lo sbarco degli Alleati in Normandia?", choices: ["1942", "1943", "1944", "1945"], correctIndex: 2 },
+  { category: "Storia", text: "Chi fu il primo astronauta a compiere una passeggiata spaziale (EVA)?", choices: ["Yuri Gagarin", "Alexei Leonov", "John Glenn", "Neil Armstrong"], correctIndex: 1 },
+  { category: "Storia", text: "Chi fu il fondatore dell'Impero Mongolo nel XIII secolo?", choices: ["Kublai Khan", "Tamerlano", "Gengis Khan", "Attila"], correctIndex: 2 },
+  { category: "Storia", text: "In quale anno fu fondata l'UNESCO?", choices: ["1942", "1945", "1950", "1954"], correctIndex: 1 },
+
+  // Musica (8)
+  { category: "Musica", text: "Qual è la città simbolo di Elvis Presley, dove si trova la sua villa Graceland?", choices: ["Nashville", "Memphis", "New Orleans", "Las Vegas"], correctIndex: 1 },
+  { category: "Musica", text: "Da quale paese proviene il genere musicale reggae?", choices: ["Brasile", "Giamaica", "Cuba", "Trinidad"], correctIndex: 1 },
+  { category: "Musica", text: "Quale gruppo musicale ha venduto più dischi nella storia?", choices: ["Rolling Stones", "Led Zeppelin", "The Beatles", "Pink Floyd"], correctIndex: 2 },
+  { category: "Musica", text: "In quale anno morì il cantante Freddie Mercury?", choices: ["1989", "1991", "1993", "1995"], correctIndex: 1 },
+  { category: "Musica", text: "Chi ha composto la celebre canzone napoletana 'O Sole Mio'?", choices: ["Francesco Paolo Tosti", "Eduardo di Capua", "Enrico Caruso", "Salvatore Di Giacomo"], correctIndex: 1 },
+  { category: "Musica", text: "Quale cantante americano è soprannominato 'The Boss'?", choices: ["Bob Dylan", "Tom Petty", "Bruce Springsteen", "Billy Joel"], correctIndex: 2 },
+  { category: "Musica", text: "Da quale paese proviene il flamenco?", choices: ["Portogallo", "Argentina", "Messico", "Spagna"], correctIndex: 3 },
+  { category: "Musica", text: "Quale artista ha pubblicato l'album 'Thriller', il più venduto della storia?", choices: ["Prince", "Madonna", "Michael Jackson", "Whitney Houston"], correctIndex: 2 },
+
+  // Cinema e TV (8)
+  { category: "Cinema e TV", text: "Quale attore ha interpretato il personaggio principale nel film 'Forrest Gump'?", choices: ["Kevin Costner", "Tom Hanks", "Mel Gibson", "John Travolta"], correctIndex: 1 },
+  { category: "Cinema e TV", text: "Chi ha diretto il film '2001: Odissea nello spazio'?", choices: ["Ridley Scott", "Steven Spielberg", "Stanley Kubrick", "Terry Gilliam"], correctIndex: 2 },
+  { category: "Cinema e TV", text: "In quale anno uscì il primo film de 'Il Padrino'?", choices: ["1969", "1970", "1972", "1974"], correctIndex: 2 },
+  { category: "Cinema e TV", text: "Quale attore italiano ha vinto l'Oscar come miglior attore per 'La vita è bella'?", choices: ["Marcello Mastroianni", "Roberto Benigni", "Massimo Troisi", "Nanni Moretti"], correctIndex: 1 },
+  { category: "Cinema e TV", text: "Chi ha scritto il romanzo da cui è tratto il film 'Il Padrino'?", choices: ["Truman Capote", "Philip Roth", "Mario Puzo", "John Grisham"], correctIndex: 2 },
+  { category: "Cinema e TV", text: "In quale film del 1991 Anthony Hopkins interpreta il cannibale Hannibal Lecter?", choices: ["Seven", "Manhunter", "Il silenzio degli innocenti", "Red Dragon"], correctIndex: 2 },
+  { category: "Cinema e TV", text: "Quale regista italiano è noto per la trilogia del dollaro degli Spaghetti Western?", choices: ["Luchino Visconti", "Federico Fellini", "Sergio Leone", "Dario Argento"], correctIndex: 2 },
+  { category: "Cinema e TV", text: "In quale paese è ambientata la serie TV 'La casa di carta'?", choices: ["Italia", "Francia", "Portogallo", "Spagna"], correctIndex: 3 },
+
+  // Cucina (8)
+  { category: "Cucina", text: "In quale nazione viene prodotto lo spumante Cava?", choices: ["Francia", "Italia", "Portogallo", "Spagna"], correctIndex: 3 },
+  { category: "Cucina", text: "Quale ingrediente NON è presente nella pizza marinara tradizionale?", choices: ["Pomodoro", "Aglio", "Origano", "Mozzarella"], correctIndex: 3 },
+  { category: "Cucina", text: "Quale è l'ingrediente principale del pesto genovese, oltre all'olio d'oliva?", choices: ["Prezzemolo", "Basilico", "Rucola", "Menta"], correctIndex: 1 },
+  { category: "Cucina", text: "Quale pasta ripiena è tipica della cucina emiliana?", choices: ["Orecchiette", "Tortellini", "Bucatini", "Rigatoni"], correctIndex: 1 },
+  { category: "Cucina", text: "Con quale frutto si produce il calvados, il brandy tipico della Normandia?", choices: ["Uva", "Pera", "Mela", "Prugna"], correctIndex: 2 },
+  { category: "Cucina", text: "Quale cereale è l'ingrediente principale della polenta?", choices: ["Frumento", "Orzo", "Granoturco", "Segale"], correctIndex: 2 },
+  { category: "Cucina", text: "Quale è il piatto tradizionale francese a base di pesce tipico di Marsiglia?", choices: ["Cassoulet", "Ratatouille", "Bouillabaisse", "Brandade"], correctIndex: 2 },
+  { category: "Cucina", text: "In quale regione italiana è nata la pizza napoletana?", choices: ["Lazio", "Sicilia", "Calabria", "Campania"], correctIndex: 3 },
+
+  // Letteratura (7)
+  { category: "Letteratura", text: "Chi ha scritto 'Il conte di Montecristo'?", choices: ["Stendhal", "Victor Hugo", "Honoré de Balzac", "Alexandre Dumas"], correctIndex: 3 },
+  { category: "Letteratura", text: "Quale scrittore britannico ha creato il personaggio di James Bond?", choices: ["John le Carré", "Graham Greene", "Ian Fleming", "Frederick Forsyth"], correctIndex: 2 },
+  { category: "Letteratura", text: "Chi ha scritto il romanzo 'Anna Karenina'?", choices: ["Fëdor Dostoevskij", "Anton Čechov", "Ivan Turgenev", "Lev Tolstoj"], correctIndex: 3 },
+  { category: "Letteratura", text: "A chi è attribuita l'Odissea?", choices: ["Virgilio", "Esiodo", "Omero", "Sofocle"], correctIndex: 2 },
+  { category: "Letteratura", text: "In quale romanzo di Kafka un personaggio si sveglia trasformato in un insetto?", choices: ["Il processo", "Il castello", "America", "La metamorfosi"], correctIndex: 3 },
+  { category: "Letteratura", text: "Chi ha scritto 'Orgoglio e pregiudizio'?", choices: ["Charlotte Brontë", "Emily Brontë", "Jane Austen", "George Eliot"], correctIndex: 2 },
+  { category: "Letteratura", text: "Chi ha scritto 'Il Gattopardo'?", choices: ["Italo Calvino", "Leonardo Sciascia", "Giuseppe Tomasi di Lampedusa", "Vitaliano Brancati"], correctIndex: 2 },
+
+  // Scienza (7)
+  { category: "Scienza", text: "Qual è il simbolo chimico del ferro?", choices: ["Fr", "Fe", "F", "Fl"], correctIndex: 1 },
+  { category: "Scienza", text: "Cosa studia la sismologia?", choices: ["I vulcani", "Le maree", "I terremoti", "Il clima"], correctIndex: 2 },
+  { category: "Scienza", text: "Chi ha scoperto, insieme alla collaboratrice Rosalind Franklin, la struttura a doppia elica del DNA?", choices: ["Louis Pasteur e Robert Koch", "Gregor Mendel e Hugo de Vries", "Watson e Crick", "Darwin e Wallace"], correctIndex: 2 },
+  { category: "Scienza", text: "Qual è la temperatura media normale del corpo umano?", choices: ["35°C", "36,5°C", "38°C", "39°C"], correctIndex: 1 },
+  { category: "Scienza", text: "Quale pianeta è il più vicino al Sole nel sistema solare?", choices: ["Venere", "Marte", "Saturno", "Mercurio"], correctIndex: 3 },
+  { category: "Scienza", text: "Quanti elementi sono presenti nella tavola periodica attualmente riconosciuta?", choices: ["103", "112", "118", "125"], correctIndex: 2 },
+  { category: "Scienza", text: "In quale organo del corpo umano si trovano principalmente i neuroni?", choices: ["Reni", "Cervello e sistema nervoso", "Cuore", "Polmoni"], correctIndex: 1 },
+
+  // Geografia (8)
+  { category: "Geografia", text: "Qual è la capitale della Nuova Zelanda?", choices: ["Auckland", "Christchurch", "Wellington", "Dunedin"], correctIndex: 2 },
+  { category: "Geografia", text: "In quale oceano si trova l'Isola di Pasqua, famosa per le sue statue dette Moai?", choices: ["Oceano Atlantico", "Oceano Indiano", "Oceano Artico", "Oceano Pacifico"], correctIndex: 3 },
+  { category: "Geografia", text: "In quale paese si trova il Grand Canyon?", choices: ["Messico", "Canada", "Australia", "Stati Uniti"], correctIndex: 3 },
+  { category: "Geografia", text: "Quale piccolo paese si trova tra Francia e Spagna, sui Pirenei?", choices: ["Monaco", "Lussemburgo", "Andorra", "Liechtenstein"], correctIndex: 2 },
+  { category: "Geografia", text: "Quale città della Siberia è spesso citata come la più fredda del mondo tra quelle stabilmente abitate?", choices: ["Mosca", "Yakutsk", "Norilsk", "Murmansk"], correctIndex: 1 },
+  { category: "Geografia", text: "In quale paese si trova il monte Kilimanjaro?", choices: ["Kenya", "Tanzania", "Etiopia", "Uganda"], correctIndex: 1 },
+  { category: "Geografia", text: "Quale stretto separa il continente africano da quello europeo?", choices: ["Stretto di Messina", "Stretto del Bosforo", "Stretto di Gibilterra", "Stretto di Dover"], correctIndex: 2 },
+  { category: "Geografia", text: "Qual è l'attuale capitale del Kazakistan?", choices: ["Almaty", "Astana", "Shymkent", "Karaganda"], correctIndex: 1 },
+
+  // Tecnologia (5)
+  { category: "Tecnologia", text: "Chi ha co-fondato Microsoft insieme a Bill Gates?", choices: ["Steve Jobs", "Paul Allen", "Larry Ellison", "Gordon Moore"], correctIndex: 1 },
+  { category: "Tecnologia", text: "In quale anno Tim Berners-Lee rese disponibile al pubblico il primo sito web?", choices: ["1989", "1991", "1993", "1995"], correctIndex: 1 },
+  { category: "Tecnologia", text: "Cosa significa l'acronimo 'GPS'?", choices: ["General Positioning Software", "Global Positioning System", "Geo Precision Satellite", "Ground Positioning Service"], correctIndex: 1 },
+  { category: "Tecnologia", text: "Chi ha creato il linguaggio di programmazione Python?", choices: ["Linus Torvalds", "James Gosling", "Brendan Eich", "Guido van Rossum"], correctIndex: 3 },
+  { category: "Tecnologia", text: "Quale sistema operativo è il più usato nei server web a livello mondiale?", choices: ["Windows Server", "macOS Server", "Linux", "FreeBSD"], correctIndex: 2 },
+
+  // Natura (6)
+  { category: "Natura", text: "Quale animale utilizza l'ecolocazione per orientarsi nel buio?", choices: ["Gufo", "Pipistrello", "Gatto", "Topo"], correctIndex: 1 },
+  { category: "Natura", text: "Quanto dura circa la gestazione di un elefante africano?", choices: ["9 mesi", "14 mesi", "18 mesi", "22 mesi"], correctIndex: 3 },
+  { category: "Natura", text: "Quante zampe ha un granchio?", choices: ["6", "8", "10", "12"], correctIndex: 2 },
+  { category: "Natura", text: "Quale è il fiume più lungo del continente europeo?", choices: ["Danubio", "Reno", "Volga", "Don"], correctIndex: 2 },
+  { category: "Natura", text: "Quale è il metallo più abbondante nella crosta terrestre?", choices: ["Ferro", "Rame", "Alluminio", "Titanio"], correctIndex: 2 },
+  { category: "Natura", text: "Quale mammifero è considerato il più longevo, con esemplari documentati oltre i 200 anni?", choices: ["Elefante africano", "Balena di Groenlandia", "Orso polare", "Gorilla"], correctIndex: 1 },
+
+  // Arte (4)
+  { category: "Arte", text: "Chi ha dipinto 'La persistenza della memoria', famosa per le immagini degli orologi molli?", choices: ["Pablo Picasso", "Joan Miró", "Max Ernst", "Salvador Dalí"], correctIndex: 3 },
+  { category: "Arte", text: "In quale città si trova la Sagrada Família, la basilica progettata da Antoni Gaudí?", choices: ["Madrid", "Siviglia", "Valencia", "Barcellona"], correctIndex: 3 },
+  { category: "Arte", text: "Quale stile architettonico medievale è caratterizzato da archi a sesto acuto e grandi vetrate colorate?", choices: ["Romanico", "Barocco", "Gotico", "Rinascimentale"], correctIndex: 2 },
+  { category: "Arte", text: "Chi ha dipinto la celebre serie 'Le ninfee'?", choices: ["Pierre-Auguste Renoir", "Edgar Degas", "Paul Cézanne", "Claude Monet"], correctIndex: 3 },
+
+  // Cultura Generale (12)
+  { category: "Cultura Generale", text: "Quale delle seguenti parole è un sinonimo di 'sproloquio'?", choices: ["Epitaffio", "Epigramma", "Pappardella", "Aforisma"], correctIndex: 2 },
+  { category: "Cultura Generale", text: "In quale delle seguenti città soffia il vento chiamato 'ponentino'?", choices: ["Milano", "Napoli", "Venezia", "Roma"], correctIndex: 3 },
+  { category: "Cultura Generale", text: "Quante lettere ha l'alfabeto italiano standard, senza le lettere straniere?", choices: ["20", "21", "23", "26"], correctIndex: 1 },
+  { category: "Cultura Generale", text: "Qual è il numero atomico dell'ossigeno nella tavola periodica?", choices: ["6", "7", "8", "9"], correctIndex: 2 },
+  { category: "Cultura Generale", text: "Cosa celebra l'Italia il 25 aprile ogni anno?", choices: ["La fondazione della Repubblica", "L'Unità d'Italia", "La Liberazione dal nazifascismo", "La firma della Costituzione"], correctIndex: 2 },
+  { category: "Cultura Generale", text: "In quale anno fu inaugurata la Torre Eiffel a Parigi?", choices: ["1876", "1882", "1889", "1896"], correctIndex: 2 },
+  { category: "Cultura Generale", text: "Chi ha inventato il vaccino contro il vaiolo?", choices: ["Louis Pasteur", "Robert Koch", "Alexander Fleming", "Edward Jenner"], correctIndex: 3 },
+  { category: "Cultura Generale", text: "Qual è il fiume più lungo d'Italia?", choices: ["Arno", "Tevere", "Adige", "Po"], correctIndex: 3 },
+  { category: "Cultura Generale", text: "Quale strumento viene usato dal direttore d'orchestra per guidare i musicisti?", choices: ["Violino", "Flauto", "Bacchetta", "Pianoforte"], correctIndex: 2 },
+  { category: "Cultura Generale", text: "Quanti anni dura il mandato del presidente degli Stati Uniti?", choices: ["2 anni", "4 anni", "5 anni", "6 anni"], correctIndex: 1 },
+  { category: "Cultura Generale", text: "In quale città italiana si trova il quartiere EUR, progettato durante il periodo fascista?", choices: ["Milano", "Torino", "Roma", "Napoli"], correctIndex: 2 },
+  { category: "Cultura Generale", text: "Quale popolo antico è famoso per aver inventato la scrittura cuneiforme?", choices: ["Egiziani", "Sumeri", "Fenici", "Greci"], correctIndex: 1 },
 ];
 
 async function seed() {

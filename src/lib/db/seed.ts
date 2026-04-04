@@ -338,6 +338,138 @@ const quizQuestions = [
   { category: "Lingue straniere", text: "Come si dice in spagnolo 'tempo' (ore)?", choices: ["Temps", "Zeit", "Tiempo", "Tid"], correctIndex: 2 },
   { category: "Lingue straniere", text: "Come si dice in spagnolo 'porta'?", choices: ["Porte", "Tür", "Puerta", "Dør"], correctIndex: 2 },
 
+  // Francese (10)
+  { category: "Lingue straniere", text: "Come si dice in francese 'pane'?", choices: ["Pain", "Pan", "Ekmek", "Brot"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in francese 'casa'?", choices: ["Dom", "Maison", "Haus", "Huis"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in francese 'libro'?", choices: ["Buch", "Kitap", "Livre", "Libro"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in francese 'cielo'?", choices: ["Himmel", "Gökyüzü", "Ouranós", "Ciel"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in francese 'mela'?", choices: ["Pomme", "Apfel", "Manzana", "Elma"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in francese 'pesce'?", choices: ["Balık", "Poisson", "Pescado", "Fisch"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in francese 'albero'?", choices: ["Boom", "Árbol", "Arbre", "Baum"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in francese 'luna'?", choices: ["Mond", "Lune", "Ay", "Księżyc"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in francese 'rosso'?", choices: ["Rojo", "Rouge", "Rot", "Kırmızı"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in francese 'fuoco'?", choices: ["Feu", "Fuego", "Feuer", "Ateş"], correctIndex: 0 },
+
+  // Tedesco (10)
+  { category: "Lingue straniere", text: "Come si dice in tedesco 'sole'?", choices: ["Sonne", "Soleil", "Sol", "Güneş"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in tedesco 'cane'?", choices: ["Chien", "Hund", "Perro", "Köpek"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in tedesco 'neve'?", choices: ["Nieve", "Neige", "Schnee", "Sneeuw"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in tedesco 'bambino'?", choices: ["Niño", "Enfant", "Copil", "Kind"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in tedesco 'pane'?", choices: ["Ekmek", "Brot", "Pain", "Pan"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in tedesco 'mare'?", choices: ["Mar", "Meer", "Mer", "Deniz"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in tedesco 'mano'?", choices: ["Main", "Käsi", "Hand", "Ruka"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in tedesco 'pietra'?", choices: ["Kaya", "Piedra", "Pierre", "Stein"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in tedesco 'libro'?", choices: ["Buch", "Livre", "Livro", "Kitap"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in tedesco 'verde'?", choices: ["Vert", "Grün", "Verde", "Yeşil"], correctIndex: 1 },
+
+  // Portoghese (10)
+  { category: "Lingue straniere", text: "Come si dice in portoghese 'cuore'?", choices: ["Corazón", "Cœur", "Coração", "Serce"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in portoghese 'notte'?", choices: ["Noite", "Noche", "Nuit", "Nacht"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in portoghese 'stella'?", choices: ["Stern", "Estrela", "Étoile", "Estrella"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in portoghese 'acqua'?", choices: ["Voda", "Agua", "Água", "Eau"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in portoghese 'cane'?", choices: ["Perro", "Chien", "Cão", "Hund"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in portoghese 'pane'?", choices: ["Brot", "Pain", "Pan", "Pão"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in portoghese 'sogno'?", choices: ["Rêve", "Sueño", "Traum", "Sonho"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in portoghese 'luna'?", choices: ["Lua", "Lune", "Mond", "Ay"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in portoghese 'chiave'?", choices: ["Clé", "Llave", "Schlüssel", "Chave"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in portoghese 'farfalla'?", choices: ["Mariposa", "Borboleta", "Papillon", "Schmetterling"], correctIndex: 1 },
+
+  // Giapponese (8)
+  { category: "Lingue straniere", text: "Come si dice in giapponese 'acqua'?", choices: ["Mizu", "Nước", "Água", "Voda"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in giapponese 'grazie'?", choices: ["Xièxiè", "Arigatou", "Gamsahamnida", "Dhanyavaad"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in giapponese 'sole'?", choices: ["Güneş", "Taiyang", "Taiyou", "Matahari"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in giapponese 'montagna'?", choices: ["Dağ", "Shan", "Yama", "Fjell"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in giapponese 'cibo'?", choices: ["Tabemono", "Yemek", "Makanan", "Thức ăn"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in giapponese 'bianco'?", choices: ["Bái", "Beyaz", "Shiro", "Baltas"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in giapponese 'amore'?", choices: ["Sevgi", "Ai", "Sarang", "Liebe"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in giapponese 'libro'?", choices: ["Buku", "Kitap", "Hon", "Kitab"], correctIndex: 2 },
+
+  // Cinese (8)
+  { category: "Lingue straniere", text: "Come si dice in cinese 'acqua'?", choices: ["Shuǐ", "Mizu", "Nước", "Voda"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in cinese 'grazie'?", choices: ["Arigatou", "Xièxiè", "Gamsahamnida", "Teşekkür"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in cinese 'numero'?", choices: ["Número", "Anzahl", "Shùzì", "Nomer"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in cinese 'grande'?", choices: ["Grand", "Büyük", "Groß", "Dà"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in cinese 'cibo'?", choices: ["Shíwù", "Yemek", "Tabemono", "Makanan"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in cinese 'rosso'?", choices: ["Kırmızı", "Aka", "Červená", "Hóng"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in cinese 'montagna'?", choices: ["Yama", "Dağ", "Shān", "Fjell"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in cinese 'amico'?", choices: ["Péngyou", "Arkadaş", "Tomodachi", "Ami"], correctIndex: 0 },
+
+  // Arabo (8)
+  { category: "Lingue straniere", text: "Come si dice in arabo 'acqua'?", choices: ["Ma'", "Pani", "Nước", "Vann"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in arabo 'sole'?", choices: ["Güneş", "Shams", "Surya", "Nap"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in arabo 'cane'?", choices: ["Kelb", "Köpek", "Koira", "Inu"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in arabo 'casa'?", choices: ["Bayt", "Huis", "Ev", "Dom"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in arabo 'libro'?", choices: ["Buku", "Kitab", "Hon", "Knjiga"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in arabo 'mare'?", choices: ["Deniz", "Havet", "Meer", "Bahr"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in arabo 'luna'?", choices: ["Ay", "Qamar", "Tsuki", "Bulan"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in arabo 'grazie'?", choices: ["Shukran", "Merci", "Teşekkür", "Obrigado"], correctIndex: 0 },
+
+  // Russo (8)
+  { category: "Lingue straniere", text: "Come si dice in russo 'acqua'?", choices: ["Voda", "Pani", "Shuǐ", "Eau"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in russo 'cane'?", choices: ["Kutya", "Sobaka", "Köpek", "Hond"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in russo 'casa'?", choices: ["Huis", "Ev", "Dom", "Heim"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in russo 'grazie'?", choices: ["Xièxiè", "Arigatou", "Spasibo", "Dhanyavaad"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in russo 'pane'?", choices: ["Pain", "Brot", "Ekmek", "Khleb"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in russo 'ciao'?", choices: ["Bonjour", "Hola", "Privet", "Merhaba"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in russo 'libro'?", choices: ["Kitab", "Livre", "Kniga", "Kitap"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in russo 'rosso'?", choices: ["Krasnyy", "Czerwony", "Rojo", "Kırmızı"], correctIndex: 0 },
+
+  // Turco (5)
+  { category: "Lingue straniere", text: "Come si dice in turco 'acqua'?", choices: ["Su", "Voda", "Pani", "Eau"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in turco 'casa'?", choices: ["Dom", "Huis", "Maison", "Ev"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in turco 'amore'?", choices: ["Sevgi", "Liebe", "Amour", "Lyubov"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in turco 'grazie'?", choices: ["Merci", "Teşekkür", "Danke", "Spasibo"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in turco 'cane'?", choices: ["Hund", "Chien", "Köpek", "Sobaka"], correctIndex: 2 },
+
+  // Greco (5)
+  { category: "Lingue straniere", text: "Come si dice in greco 'acqua'?", choices: ["Neró", "Voda", "Pani", "Eau"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in greco 'grazie'?", choices: ["Merci", "Danke", "Efcharistó", "Gracias"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in greco 'sole'?", choices: ["Ílios", "Güneş", "Soleil", "Surya"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in greco 'mare'?", choices: ["Mar", "Meer", "Thalassa", "Deniz"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in greco 'amore'?", choices: ["Amour", "Agapi", "Liebe", "Aşk"], correctIndex: 1 },
+
+  // Olandese (5)
+  { category: "Lingue straniere", text: "Come si dice in olandese 'casa'?", choices: ["Huis", "Haus", "Hus", "Dom"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in olandese 'cane'?", choices: ["Hund", "Chien", "Hond", "Perro"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in olandese 'acqua'?", choices: ["Vatten", "Vann", "Vand", "Water"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in olandese 'rosso'?", choices: ["Rouge", "Rood", "Rojo", "Rot"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in olandese 'libro'?", choices: ["Buch", "Boek", "Bok", "Livre"], correctIndex: 1 },
+
+  // Polacco (5)
+  { category: "Lingue straniere", text: "Come si dice in polacco 'acqua'?", choices: ["Voda", "Woda", "Vand", "Vatten"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in polacco 'casa'?", choices: ["Huis", "Dom", "Haus", "Ev"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in polacco 'rosso'?", choices: ["Rojo", "Krasnyy", "Czerwony", "Rood"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in polacco 'luna'?", choices: ["Lune", "Mond", "Księżyc", "Ay"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in polacco 'pane'?", choices: ["Chleb", "Ekmek", "Brot", "Pain"], correctIndex: 0 },
+
+  // Svedese (5)
+  { category: "Lingue straniere", text: "Come si dice in svedese 'casa'?", choices: ["Hus", "Huis", "Haus", "Dom"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in svedese 'acqua'?", choices: ["Vann", "Vatten", "Voda", "Woda"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in svedese 'pane'?", choices: ["Brot", "Bread", "Bröd", "Brood"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in svedese 'libro'?", choices: ["Buch", "Bok", "Boek", "Livro"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in svedese 'rosso'?", choices: ["Rood", "Rot", "Röd", "Rojo"], correctIndex: 2 },
+
+  // Swahili (4)
+  { category: "Lingue straniere", text: "Come si dice in swahili 'acqua'?", choices: ["Maji", "Ma'", "Nước", "Pani"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in swahili 'casa'?", choices: ["Rumah", "Bahay", "Ghar", "Nyumba"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in swahili 'grazie'?", choices: ["Shukran", "Salamat", "Dankie", "Asante"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in swahili 'sole'?", choices: ["Surya", "Jua", "Inti", "Ra"], correctIndex: 1 },
+
+  // Gallese (4)
+  { category: "Lingue straniere", text: "Come si dice in gallese 'cane'?", choices: ["Koira", "Ci", "Anjing", "Aso"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in gallese 'testa'?", choices: ["Pen", "Hoved", "Baş", "Glava"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in gallese 'acqua'?", choices: ["Uisce", "Dŵr", "Vesi", "Nước"], correctIndex: 1 },
+  { category: "Lingue straniere", text: "Come si dice in gallese 'bianco'?", choices: ["Bán", "Gwyn", "Vit", "Blanche"], correctIndex: 1 },
+
+  // Hawaiano (4)
+  { category: "Lingue straniere", text: "Come si dice in hawaiano 'ciao/benvenuto'?", choices: ["Aloha", "Kia Ora", "Hola", "Malo e lelei"], correctIndex: 0 },
+  { category: "Lingue straniere", text: "Come si dice in hawaiano 'grazie'?", choices: ["Asante", "Salamat", "Mahalo", "Merci"], correctIndex: 2 },
+  { category: "Lingue straniere", text: "Come si dice in hawaiano 'oceano'?", choices: ["Bahari", "Dagat", "Deniz", "Moana"], correctIndex: 3 },
+  { category: "Lingue straniere", text: "Come si dice in hawaiano 'bambino'?", choices: ["Tamaiti", "Mtoto", "Keiki", "Çocuk"], correctIndex: 2 },
+
+  // Finlandese (1)
+  { category: "Lingue straniere", text: "Come si dice in finlandese 'acqua'?", choices: ["Vatten", "Vann", "Voda", "Vesi"], correctIndex: 3 },
+
   // Cultura Generale
   { category: "Cultura Generale", text: "Chi ha dipinto la Gioconda?", choices: ["Raffaello", "Michelangelo", "Leonardo da Vinci", "Caravaggio"], correctIndex: 2 },
   { category: "Cultura Generale", text: "Quante regioni ha l'Italia?", choices: ["15", "18", "20", "22"], correctIndex: 2 },

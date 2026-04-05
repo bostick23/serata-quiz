@@ -1,13 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <path d="M 15 20 Q 15 15 20 15 L 50 15 L 50 85 L 20 85 Q 15 85 15 80 Z" fill="#A3E635" stroke="#4D7C0F" stroke-width="2"/>
-  <path d="M 50 15 L 80 15 Q 85 15 85 20 L 85 80 Q 85 85 80 85 L 50 85 Z" fill="#84CC16" stroke="#4D7C0F" stroke-width="2"/>
-  <line x1="50" y1="15" x2="50" y2="85" stroke="#4D7C0F" stroke-width="2"/>
-  <line x1="25" y1="35" x2="45" y2="35" stroke="#4D7C0F" stroke-width="2" stroke-linecap="round"/>
-  <line x1="25" y1="45" x2="45" y2="45" stroke="#4D7C0F" stroke-width="2" stroke-linecap="round"/>
-  <line x1="25" y1="55" x2="45" y2="55" stroke="#4D7C0F" stroke-width="2" stroke-linecap="round"/>
-  <line x1="25" y1="65" x2="45" y2="65" stroke="#4D7C0F" stroke-width="2" stroke-linecap="round"/>
-  <line x1="55" y1="35" x2="75" y2="35" stroke="#4D7C0F" stroke-width="2" stroke-linecap="round"/>
-  <line x1="55" y1="45" x2="75" y2="45" stroke="#4D7C0F" stroke-width="2" stroke-linecap="round"/>
-  <line x1="55" y1="55" x2="75" y2="55" stroke="#4D7C0F" stroke-width="2" stroke-linecap="round"/>
-  <line x1="55" y1="65" x2="75" y2="65" stroke="#4D7C0F" stroke-width="2" stroke-linecap="round"/>
+  <!-- Stack of books at bottom -->
+  <!-- Book 3 (bottom, horizontal, red) -->
+  <rect x="18" y="72" width="52" height="10" rx="2" fill="#EF4444"/>
+  <rect x="18" y="72" width="4" height="10" rx="1" fill="#DC2626"/>
+  <line x1="30" y1="77" x2="55" y2="77" stroke="#FCA5A5" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Book 2 (middle, horizontal, teal) -->
+  <rect x="22" y="62" width="48" height="10" rx="2" fill="#14B8A6"/>
+  <rect x="22" y="62" width="4" height="10" rx="1" fill="#0D9488"/>
+  <line x1="34" y1="67" x2="56" y2="67" stroke="#5EEAD4" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Main open book -->
+  <!-- Left page -->
+  <path d="M50,22 Q48,20 30,18 Q18,17 14,20 L14,60 Q18,57 30,58 Q48,59 50,62 Z" fill="#FEF3C7" stroke="#D97706" stroke-width="1.5"/>
+  <!-- Right page -->
+  <path d="M50,22 Q52,20 70,18 Q82,17 86,20 L86,60 Q82,57 70,58 Q52,59 50,62 Z" fill="#FFFBEB" stroke="#D97706" stroke-width="1.5"/>
+  <!-- Spine -->
+  <line x1="50" y1="22" x2="50" y2="62" stroke="#D97706" stroke-width="1.5"/>
+
+  <!-- Text lines left page -->
+  <line x1="22" y1="30" x2="44" y2="28" stroke="#D4A054" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="22" y1="36" x2="44" y2="34" stroke="#D4A054" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="22" y1="42" x2="44" y2="40" stroke="#D4A054" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="22" y1="48" x2="38" y2="47" stroke="#D4A054" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Text lines right page -->
+  <line x1="56" y1="28" x2="78" y2="30" stroke="#D4A054" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="56" y1="34" x2="78" y2="36" stroke="#D4A054" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="56" y1="40" x2="78" y2="42" stroke="#D4A054" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+  <line x1="56" y1="47" x2="72" y2="48" stroke="#D4A054" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Quill pen -->
+  <path d="M72,10 Q76,18 74,30 Q73,34 72,36" fill="none" stroke="#7C3AED" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M72,10 Q70,12 71,16 Q73,14 75,13 Q73,11 72,10 Z" fill="#7C3AED"/>
+  <!-- Feather barbs -->
+  <path d="M72,10 Q68,8 65,6" fill="none" stroke="#8B5CF6" stroke-width="1" stroke-linecap="round"/>
+  <path d="M73,14 Q69,13 66,11" fill="none" stroke="#8B5CF6" stroke-width="1" stroke-linecap="round"/>
+  <!-- Ink drop -->
+  <circle cx="72" cy="38" r="2" fill="#7C3AED" opacity="0.7"/>
+
+  <!-- Small bookmark ribbon -->
+  <path d="M44,18 L44,8 L47,12 L50,8 L50,22" fill="#EF4444" opacity="0.8"/>
 </svg>

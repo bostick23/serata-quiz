@@ -14,7 +14,7 @@ interface Props {
 export default function PlayPage({ params }: Props) {
   const { joinCode } = use(params);
   const { socket, isConnected } = useSocket();
-  const { gameState, deadline, error } = useGameState(socket, joinCode);
+  const { gameState, deadline, error, rankingsRevealed } = useGameState(socket, joinCode);
   const { seconds } = useCountdown(deadline ?? null);
 
   const [teamName, setTeamName] = useState("");
@@ -440,33 +440,42 @@ export default function PlayPage({ params }: Props) {
               Partita Terminata!
             </motion.h1>
 
-            <div className="w-full max-w-sm space-y-3">
-              {gameState.rankings?.map((entry, i) => {
-                const isMe = entry.teamId === myTeamId;
-                const isFirst = i === 0;
-                return (
-                  <motion.div
-                    key={entry.teamId}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.1 }}
-                    className={`flex items-center gap-3 p-4 rounded-xl border ${
-                      isMe
-                        ? "bg-purple-500/20 border-purple-500/50 ring-2 ring-purple-500"
-                        : "bg-slate-800 border-slate-700"
-                    }`}
-                  >
-                    <span className={`text-2xl font-extrabold ${
-                      isFirst ? "text-amber-400" : "text-slate-500"
-                    }`}>
-                      {i + 1}
-                    </span>
-                    <span className="flex-1 font-medium">{entry.teamName}</span>
-                    <span className="text-lg font-bold text-purple-400">{entry.totalScore}</span>
-                  </motion.div>
-                );
-              })}
-            </div>
+            {!rankingsRevealed ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                <p className="text-slate-400 text-center animate-pulse">
+                  Guarda lo schermo per la classifica...
+                </p>
+              </div>
+            ) : (
+              <div className="w-full max-w-sm space-y-3">
+                {gameState.rankings?.map((entry, i) => {
+                  const isMe = entry.teamId === myTeamId;
+                  const isFirst = i === 0;
+                  return (
+                    <motion.div
+                      key={entry.teamId}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className={`flex items-center gap-3 p-4 rounded-xl border ${
+                        isMe
+                          ? "bg-purple-500/20 border-purple-500/50 ring-2 ring-purple-500"
+                          : "bg-slate-800 border-slate-700"
+                      }`}
+                    >
+                      <span className={`text-2xl font-extrabold ${
+                        isFirst ? "text-amber-400" : "text-slate-500"
+                      }`}>
+                        {i + 1}
+                      </span>
+                      <span className="flex-1 font-medium">{entry.teamName}</span>
+                      <span className="text-lg font-bold text-purple-400">{entry.totalScore}</span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
           </motion.div>
         )}
         {/* CANCELLED PHASE */}

@@ -11,6 +11,7 @@ export interface ServerToClientEvents {
   "answer:received": (data: { teamId: string }) => void;
   "question:results": (data: { rankings: RankingEntry[]; correctIndex: number; isLastQuestion: boolean }) => void;
   "game:finished": (data: { rankings: RankingEntry[] }) => void;
+  "rankings:revealed": () => void;
   "game:cancelled": (data: { message: string }) => void;
   "error": (data: { message: string }) => void;
 }
@@ -22,5 +23,6 @@ export interface ClientToServerEvents {
   "question:next": (data: { joinCode: string }) => void;
   "answer:submit": (data: { joinCode: string; gameQuestionId: string; chosenIndex: number }) => void;
   "game:cancel": (data: { joinCode: string }) => void;
+  "rankings:reveal-all": (data: { joinCode: string }) => void;
   "game:request-state": (data: { joinCode: string }) => void;
 }

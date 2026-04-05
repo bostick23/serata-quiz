@@ -290,6 +290,13 @@ export function setupSocketHandlers(io: Server) {
       activeGames.delete(joinCode);
     });
 
+    socket.on("rankings:reveal-all", ({ joinCode }) => {
+      const game = activeGames.get(joinCode);
+      if (!game) return;
+      if (game.hostSocketId !== socket.id) return;
+      io.to(getRoomName(joinCode)).emit("rankings:revealed");
+    });
+
     socket.on("game:request-state", ({ joinCode }) => {
       const game = activeGames.get(joinCode);
       if (game) {

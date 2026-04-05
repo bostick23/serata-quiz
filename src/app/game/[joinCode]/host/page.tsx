@@ -564,9 +564,13 @@ export default function HostPage({ params }: Props) {
           const rankings = gameState.rankings ?? [];
           const totalPositions = rankings.length;
           const allRevealed = revealedCount >= totalPositions;
-          // Show entries from last place to first (reversed), sliced to revealedCount
+          // Reveal from last place to first; display in natural order (1st at top)
           const reversedRankings = [...rankings].reverse();
           const visibleEntries = reversedRankings.slice(0, revealedCount);
+          // Sort visible entries back to natural order (1st place first)
+          const sortedVisible = [...visibleEntries].sort((a, b) => {
+            return rankings.indexOf(a) - rankings.indexOf(b);
+          });
 
           return (
             <motion.div
@@ -576,7 +580,12 @@ export default function HostPage({ params }: Props) {
               className="flex-1 flex flex-col items-center justify-center p-8 cursor-pointer select-none"
               onClick={() => {
                 if (!allRevealed) {
-                  setRevealedCount((c) => c + 1);
+                  const newCount = revealedCount + 1;
+                  setRevealedCount(newCount);
+                  // When all positions revealed, notify players
+                  if (newCount >= totalPositions && socket) {
+                    socket.emit("rankings:reveal-all", { joinCode });
+                  }
                 }
               }}
             >
@@ -604,7 +613,7 @@ export default function HostPage({ params }: Props) {
 
               <div className="max-w-xl w-full space-y-4">
                 <AnimatePresence mode="popLayout">
-                  {visibleEntries.map((entry) => {
+                  {sortedVisible.map((entry) => {
                     const originalIndex = rankings.indexOf(entry);
                     const position = originalIndex + 1;
                     const isFirst = position === 1;

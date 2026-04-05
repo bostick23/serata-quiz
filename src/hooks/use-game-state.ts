@@ -18,6 +18,7 @@ export function useGameState(socket: Socket | null, joinCode: string) {
   const [deadline, setDeadline] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [answeredTeams, setAnsweredTeams] = useState<Set<string>>(new Set());
+  const [rankingsRevealed, setRankingsRevealed] = useState(false);
 
   useEffect(() => {
     if (!socket) return;
@@ -70,6 +71,11 @@ export function useGameState(socket: Socket | null, joinCode: string) {
     socket.on("game:finished", ({ rankings }) => {
       setGameState(prev => ({ ...prev, phase: "finished", rankings }));
       setDeadline(null);
+      setRankingsRevealed(false);
+    });
+
+    socket.on("rankings:revealed", () => {
+      setRankingsRevealed(true);
     });
 
     socket.on("game:cancelled", ({ message }) => {
@@ -92,10 +98,11 @@ export function useGameState(socket: Socket | null, joinCode: string) {
       socket.off("answer:received");
       socket.off("question:results");
       socket.off("game:finished");
+      socket.off("rankings:revealed");
       socket.off("game:cancelled");
       socket.off("error");
     };
   }, [socket]);
 
-  return { gameState, deadline, error, answeredTeams, setError };
+  return { gameState, deadline, error, answeredTeams, rankingsRevealed, setError };
 }

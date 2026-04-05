@@ -45,14 +45,23 @@ export async function createActiveGame(joinCode: string, gameId: string, hostId:
 
   const existingTeams = await db.select().from(teams).where(eq(teams.gameId, gameId));
 
+  // Determine phase from DB status and currentQuestionIndex
+  let phase: GamePhase = "lobby";
+  if (game.status === "playing") {
+    // Game was in progress — restore to results so host can click "next"
+    phase = game.currentQuestionIndex > 0 ? "results" : "lobby";
+  } else if (game.status === "finished") {
+    phase = "finished";
+  }
+
   const activeGame: ActiveGame = {
     joinCode,
     gameId,
     hostId,
     hostSocketId: null,
     language: game.language ?? "it",
-    phase: "lobby",
-    currentQuestionIndex: 0,
+    phase,
+    currentQuestionIndex: game.currentQuestionIndex ?? 0,
     numQuestions: game.numQuestions,
     teams: new Map(),
     currentQuestion: null,
@@ -179,9 +188,7 @@ export function setupSocketHandlers(io: Server) {
         return;
       }
 
-      game.phase = "read";
       game.currentQuestionIndex = 1;
-
       await db.update(games).set({ status: "playing", currentQuestionIndex: 1 }).where(eq(games.id, game.gameId));
 
       await loadAndShowQuestion(io, game);
@@ -203,10 +210,9 @@ export function setupSocketHandlers(io: Server) {
         return;
       }
 
-      // Next question
-      game.currentQuestionIndex++;
-      game.phase = "read";
-      await loadAndShowQuestion(io, game);
+      // Advance to next question — index and phase change happen inside loadAndShowQuestion
+      const nextIndex = game.currentQuestionIndex + 1;
+      await loadAndShowQuestion(io, game, nextIndex);
     });
 
     socket.on("answer:submit", async ({ joinCode, gameQuestionId, chosenIndex }) => {
@@ -310,26 +316,38 @@ export function setupSocketHandlers(io: Server) {
   });
 }
 
-async function loadAndShowQuestion(io: Server, game: ActiveGame) {
+async function loadAndShowQuestion(io: Server, game: ActiveGame, questionIndex?: number) {
+  const idx = questionIndex ?? game.currentQuestionIndex;
+
   const q = game.questionsList.find(
-    (q) => q.position === game.currentQuestionIndex
+    (q) => q.position === idx
   );
-  if (!q) return;
+  if (!q) {
+    console.error(`[Game ${game.joinCode}] Question not found for position ${idx}. questionsList has ${game.questionsList.length} items, positions: ${game.questionsList.map(q => q.position).join(",")}`);
+    return;
+  }
 
   const [questionData] = await db.select().from(questions).where(eq(questions.id, q.questionId));
-  if (!questionData) return;
+  if (!questionData) {
+    console.error(`[Game ${game.joinCode}] Question data not found in DB for questionId ${q.questionId}`);
+    return;
+  }
 
+  // Only update state AFTER we confirmed the question exists
+  game.currentQuestionIndex = idx;
   game.currentQuestion = {
     gameQuestionId: q.gameQuestionId,
     category: questionData.category ?? "Generale",
     text: questionData.text,
     choices: questionData.choices,
-    position: game.currentQuestionIndex,
+    position: idx,
     totalQuestions: game.numQuestions,
   };
   game.currentCorrectIndex = questionData.correctIndex;
   game.answeredTeams = new Set();
 
+  // Persist progress to DB so server restarts don't lose it
+  await db.update(games).set({ currentQuestionIndex: idx }).where(eq(games.id, game.gameId));
   await db.update(gameQuestions).set({ startedAt: new Date() }).where(eq(gameQuestions.id, q.gameQuestionId));
 
   // Phase 1: Show category for 5 seconds

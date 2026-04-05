@@ -222,47 +222,48 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <label htmlFor="numQuestions" className="block text-sm font-medium text-slate-300 mb-1.5">
-                      Numero di domande (1-50)
-                    </label>
-                    <input
-                      id="numQuestions"
-                      type="number"
-                      min={1}
-                      max={50}
-                      value={numQuestions}
-                      onChange={(e) => setNumQuestions(Number(e.target.value))}
-                      className="w-full px-4 py-3 rounded-xl bg-slate-700 border border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                    />
-                  </div>
-
-                  {/* Avoid repeat toggle */}
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={avoidRepeat}
-                      onClick={() => setAvoidRepeat(!avoidRepeat)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        avoidRepeat ? "bg-purple-500" : "bg-slate-600"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          avoidRepeat ? "translate-x-6" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                     <div>
-                      <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">
-                        Evita ripetizioni
-                      </span>
-                      <p className="text-xs text-slate-500">
-                        Non ripetere domande già uscite oggi
-                      </p>
+                      <label htmlFor="numQuestions" className="block text-sm font-medium text-slate-300 mb-1.5">
+                        Numero di domande (1-50)
+                      </label>
+                      <input
+                        id="numQuestions"
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={numQuestions}
+                        onChange={(e) => setNumQuestions(Number(e.target.value))}
+                        className="w-full px-4 py-3 rounded-xl bg-slate-700 border border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                      />
                     </div>
-                  </label>
+
+                    <label className="flex items-center gap-3 cursor-pointer group px-4 py-3 rounded-xl bg-slate-700 border border-slate-600 hover:border-slate-500 transition-all">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={avoidRepeat}
+                        onClick={() => setAvoidRepeat(!avoidRepeat)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                          avoidRepeat ? "bg-purple-500" : "bg-slate-500"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            avoidRepeat ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                      <div>
+                        <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">
+                          Evita ripetizioni
+                        </span>
+                        <p className="text-xs text-slate-500">
+                          No domande già uscite oggi
+                        </p>
+                      </div>
+                    </label>
+                  </div>
 
                   {/* Advanced options */}
                   <div>

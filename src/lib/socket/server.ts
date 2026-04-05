@@ -27,7 +27,7 @@ export function initSocketServer(httpServer: HttpServer) {
   httpServer.on("upgrade", (req, socket, head) => {
     if (req.url?.startsWith("/api/socketio")) {
       // Let Socket.io handle its own upgrades
-      io!.engine.handleUpgrade(req, socket, head);
+      io!.engine.handleUpgrade(req as any, socket, head);
     } else {
       // Let Next.js HMR and other upgrades through
       for (const listener of upgradeListeners) {

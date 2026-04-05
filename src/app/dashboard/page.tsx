@@ -32,6 +32,7 @@ export default function DashboardPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [numQuestions, setNumQuestions] = useState(15);
+  const [avoidRepeat, setAvoidRepeat] = useState(true);
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -100,7 +101,7 @@ export default function DashboardPage() {
       const res = await fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ numQuestions, language, categories }),
+        body: JSON.stringify({ numQuestions, language, categories, avoidRepeat }),
       });
 
       const data = await res.json();
@@ -235,6 +236,33 @@ export default function DashboardPage() {
                       className="w-full px-4 py-3 rounded-xl bg-slate-700 border border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                     />
                   </div>
+
+                  {/* Avoid repeat toggle */}
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={avoidRepeat}
+                      onClick={() => setAvoidRepeat(!avoidRepeat)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        avoidRepeat ? "bg-purple-500" : "bg-slate-600"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          avoidRepeat ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                    <div>
+                      <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">
+                        Evita ripetizioni
+                      </span>
+                      <p className="text-xs text-slate-500">
+                        Non ripetere domande già uscite oggi
+                      </p>
+                    </div>
+                  </label>
 
                   {/* Advanced options */}
                   <div>

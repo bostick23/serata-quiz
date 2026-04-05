@@ -1,18 +1,23 @@
 const categoryImages: Record<string, string> = {
   // Italian
-  "Geografia": "/categories/globe.svg",
-  "Storia": "/categories/scroll.svg",
+  "Geografia": "/categories/geografia.apng",
+  "Storia": "/categories/storia.apng",
   "Scienza": "/categories/science.svg",
   "Sport": "/categories/sport.svg",
   "Cinema e TV": "/categories/film.svg",
-  "Musica": "/categories/music.svg",
+  "Musica": "/categories/musica.apng",
   "Cucina": "/categories/cooking.svg",
   "Letteratura": "/categories/book.svg",
   "Natura": "/categories/nature.svg",
   "Tecnologia": "/categories/technology.svg",
   "Arte": "/categories/art.svg",
   "Cartoni Animati": "/categories/cartoon.svg",
-  // English (OpenTDB)
+  "Anagrammi": "/categories/anagrammi.apng",
+  "Matematica": "/categories/matematica.apng",
+  "Cultura Generale": "/categories/brain.svg",
+  "Lingue straniere": "/categories/lingue straniere.apng",
+  "Videogiochi": "/categories/gamepad.svg",
+    // English (OpenTDB)
   "General Knowledge": "/categories/brain.svg",
   "Entertainment: Books": "/categories/book.svg",
   "Entertainment: Film": "/categories/film.svg",

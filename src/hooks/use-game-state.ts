@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import type { Socket } from "socket.io-client";
 import type { GameState } from "@/types/game";
+import { toLocalDeadline } from "./use-socket";
 
 const initialState: GameState = {
   joinCode: "",
@@ -44,19 +45,19 @@ export function useGameState(socket: Socket | null, joinCode: string) {
 
     socket.on("question:category", ({ category, questionNumber, totalQuestions, deadline: d }) => {
       setGameState(prev => ({ ...prev, phase: "category", currentQuestion: questionNumber, correctIndex: undefined, rankings: undefined, isLastQuestion: undefined, categoryName: category }));
-      setDeadline(d);
+      setDeadline(toLocalDeadline(d));
       setAnsweredTeams(new Set());
     });
 
     socket.on("question:show", ({ question, phase, deadline: d }) => {
       setGameState(prev => ({ ...prev, phase: "read", question, correctIndex: undefined, rankings: undefined, isLastQuestion: undefined }));
-      setDeadline(d);
+      setDeadline(toLocalDeadline(d));
       setAnsweredTeams(new Set());
     });
 
     socket.on("question:answer-phase", ({ deadline: d }) => {
       setGameState(prev => ({ ...prev, phase: "answer" }));
-      setDeadline(d);
+      setDeadline(toLocalDeadline(d));
     });
 
     socket.on("answer:received", ({ teamId }) => {

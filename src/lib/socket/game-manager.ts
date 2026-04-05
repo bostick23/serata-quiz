@@ -297,6 +297,10 @@ export function setupSocketHandlers(io: Server) {
       io.to(getRoomName(joinCode)).emit("rankings:revealed");
     });
 
+    socket.on("time:sync", ({ clientTime }) => {
+      socket.emit("time:sync", { clientTime, serverTime: Date.now() });
+    });
+
     socket.on("game:request-state", ({ joinCode }) => {
       const game = activeGames.get(joinCode);
       if (game) {

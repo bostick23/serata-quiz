@@ -20,7 +20,15 @@ export default function HostPage({ params }: Props) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [joinUrl, setJoinUrl] = useState("");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [revealedCount, setRevealedCount] = useState(0);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+
+  // Reset reveal counter when entering finished phase
+  useEffect(() => {
+    if (gameState.phase === "finished") {
+      setRevealedCount(0);
+    }
+  }, [gameState.phase]);
 
   // Load voice based on game language
   useEffect(() => {
@@ -449,7 +457,7 @@ export default function HostPage({ params }: Props) {
 
             {/* Rankings side by side */}
             {gameState.rankings && (
-              <div className="w-full max-w-5xl flex flex-col lg:flex-row gap-6 mb-6">
+              <div className={`w-full max-w-5xl flex flex-col ${!gameState.isLastQuestion ? "lg:flex-row" : ""} gap-6 mb-6`}>
                 {/* Question ranking (sorted by questionScore) */}
                 <div className="flex-1 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
                   <h3 className="text-lg font-semibold mb-4 text-center text-amber-400">Punteggi domanda</h3>
@@ -486,34 +494,36 @@ export default function HostPage({ params }: Props) {
                   </div>
                 </div>
 
-                {/* Overall ranking */}
-                <div className="flex-1 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
-                  <h3 className="text-lg font-semibold mb-4 text-center text-purple-400">Classifica generale</h3>
-                  <div className="space-y-2">
-                    {[...gameState.rankings]
-                      .sort((a, b) => b.totalScore - a.totalScore)
-                      .map((entry, i) => (
-                      <motion.div
-                        key={entry.teamId}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.5 + i * 0.1 }}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50"
-                      >
-                        <span className="text-2xl font-bold text-slate-400 w-8">{i + 1}</span>
-                        {entry.photoUrl ? (
-                          <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
-                            {entry.teamName.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <span className="flex-1 font-medium">{entry.teamName}</span>
-                        <span className="text-lg font-bold text-purple-400">{entry.totalScore}</span>
-                      </motion.div>
-                    ))}
+                {/* Overall ranking — hidden on last question (final ranking shown dramatically) */}
+                {!gameState.isLastQuestion && (
+                  <div className="flex-1 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                    <h3 className="text-lg font-semibold mb-4 text-center text-purple-400">Classifica generale</h3>
+                    <div className="space-y-2">
+                      {[...gameState.rankings]
+                        .sort((a, b) => b.totalScore - a.totalScore)
+                        .map((entry, i) => (
+                        <motion.div
+                          key={entry.teamId}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.5 + i * 0.1 }}
+                          className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50"
+                        >
+                          <span className="text-2xl font-bold text-slate-400 w-8">{i + 1}</span>
+                          {entry.photoUrl ? (
+                            <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
+                              {entry.teamName.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="flex-1 font-medium">{entry.teamName}</span>
+                          <span className="text-lg font-bold text-purple-400">{entry.totalScore}</span>
+                        </motion.div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -550,75 +560,121 @@ export default function HostPage({ params }: Props) {
         )}
 
         {/* FINISHED PHASE */}
-        {gameState.phase === "finished" && (
-          <motion.div
-            key="finished"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex-1 flex flex-col items-center justify-center p-8"
-          >
-            <motion.h1
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 150 }}
-              className="text-5xl sm:text-6xl font-extrabold gradient-text mb-4 text-center"
-            >
-              Partita Terminata!
-            </motion.h1>
+        {gameState.phase === "finished" && (() => {
+          const rankings = gameState.rankings ?? [];
+          const totalPositions = rankings.length;
+          const allRevealed = revealedCount >= totalPositions;
+          // Show entries from last place to first (reversed), sliced to revealedCount
+          const reversedRankings = [...rankings].reverse();
+          const visibleEntries = reversedRankings.slice(0, revealedCount);
 
-            <p className="text-slate-400 text-lg mb-12">Classifica finale</p>
-
-            <div className="max-w-xl w-full space-y-4">
-              {gameState.rankings?.map((entry, i) => {
-                const isFirst = i === 0;
-                const isSecond = i === 1;
-                const isThird = i === 2;
-                return (
-                  <motion.div
-                    key={entry.teamId}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.15 }}
-                    className={`flex items-center gap-4 p-5 rounded-2xl border shadow-lg ${
-                      isFirst
-                        ? "bg-amber-400/20 border-amber-400/50 shadow-amber-400/20"
-                        : isSecond
-                        ? "bg-slate-300/10 border-slate-400/30"
-                        : isThird
-                        ? "bg-orange-600/10 border-orange-500/30"
-                        : "bg-slate-800 border-slate-700"
-                    }`}
-                  >
-                    <span className={`text-4xl font-extrabold ${
-                      isFirst ? "text-amber-400" : isSecond ? "text-slate-300" : isThird ? "text-orange-500" : "text-slate-500"
-                    }`}>
-                      {i + 1}
-                    </span>
-                    {entry.photoUrl ? (
-                      <img src={entry.photoUrl} alt={entry.teamName} className="w-14 h-14 rounded-full object-cover border-2 border-purple-500" />
-                    ) : (
-                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
-                        {entry.teamName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    <span className="flex-1 text-xl font-bold">{entry.teamName}</span>
-                    <span className="text-2xl font-bold text-purple-400">{entry.totalScore}</span>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            <motion.button
+          return (
+            <motion.div
+              key="finished"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 1 }}
-              onClick={() => window.location.href = "/dashboard"}
-              className="mt-10 px-8 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-lg shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all"
+              className="flex-1 flex flex-col items-center justify-center p-8 cursor-pointer select-none"
+              onClick={() => {
+                if (!allRevealed) {
+                  setRevealedCount((c) => c + 1);
+                }
+              }}
             >
-              Torna alla Dashboard
-            </motion.button>
-          </motion.div>
-        )}
+              <motion.h1
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 150 }}
+                className="text-5xl sm:text-6xl font-extrabold gradient-text mb-4 text-center"
+              >
+                Partita Terminata!
+              </motion.h1>
+
+              {revealedCount === 0 ? (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-slate-400 text-lg mb-12 animate-pulse"
+                >
+                  Clicca per rivelare la classifica...
+                </motion.p>
+              ) : (
+                <p className="text-slate-400 text-lg mb-8">Classifica finale</p>
+              )}
+
+              <div className="max-w-xl w-full space-y-4">
+                <AnimatePresence mode="popLayout">
+                  {visibleEntries.map((entry) => {
+                    const originalIndex = rankings.indexOf(entry);
+                    const position = originalIndex + 1;
+                    const isFirst = position === 1;
+                    const isSecond = position === 2;
+                    const isThird = position === 3;
+                    return (
+                      <motion.div
+                        key={entry.teamId}
+                        initial={{ opacity: 0, scale: 0.8, y: -30 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                        layout
+                        className={`flex items-center gap-4 p-5 rounded-2xl border shadow-lg ${
+                          isFirst
+                            ? "bg-amber-400/20 border-amber-400/50 shadow-amber-400/20"
+                            : isSecond
+                            ? "bg-slate-300/10 border-slate-400/30"
+                            : isThird
+                            ? "bg-orange-600/10 border-orange-500/30"
+                            : "bg-slate-800 border-slate-700"
+                        }`}
+                      >
+                        <span className={`text-4xl font-extrabold ${
+                          isFirst ? "text-amber-400" : isSecond ? "text-slate-300" : isThird ? "text-orange-500" : "text-slate-500"
+                        }`}>
+                          {position}
+                        </span>
+                        {entry.photoUrl ? (
+                          <img src={entry.photoUrl} alt={entry.teamName} className="w-14 h-14 rounded-full object-cover border-2 border-purple-500" />
+                        ) : (
+                          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
+                            {entry.teamName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span className="flex-1 text-xl font-bold">{entry.teamName}</span>
+                        <span className="text-2xl font-bold text-purple-400">{entry.totalScore}</span>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+
+              {!allRevealed && revealedCount > 0 && (
+                <motion.p
+                  key={`hint-${revealedCount}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-8 text-slate-500 text-sm animate-pulse"
+                >
+                  Clicca per la prossima posizione...
+                </motion.p>
+              )}
+
+              {allRevealed && (
+                <motion.button
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.location.href = "/dashboard";
+                  }}
+                  className="mt-10 px-8 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-lg shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all"
+                >
+                  Torna alla Dashboard
+                </motion.button>
+              )}
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
     </div>
   );

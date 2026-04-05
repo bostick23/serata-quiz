@@ -1,10 +1,40 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <path d="M 50 15 Q 52 8 56 12 Q 58 5 62 10 Q 66 5 68 12" fill="none" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M 30 28 L 30 50 Q 30 72 50 72 Q 70 72 70 50 L 70 28 Z" fill="#FCA5A5" stroke="#EF4444" stroke-width="2.5"/>
-  <line x1="28" y1="38" x2="72" y2="38" stroke="#EF4444" stroke-width="2.5"/>
-  <rect x="40" y="72" width="20" height="6" rx="2" fill="#EF4444"/>
-  <rect x="30" y="78" width="40" height="8" rx="3" fill="#EF4444"/>
-  <ellipse cx="38" cy="55" rx="5" ry="3" fill="#FEE2E2"/>
-  <ellipse cx="62" cy="55" rx="5" ry="3" fill="#FEE2E2"/>
-  <ellipse cx="50" cy="62" rx="5" ry="3" fill="#FEE2E2"/>
+  <!-- Steam -->
+  <path d="M36,22 Q33,16 36,10" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M50,18 Q47,11 50,4" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M64,22 Q61,16 64,10" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <!-- Pot body -->
+  <path d="M22,38 L22,62 Q22,78 50,78 Q78,78 78,62 L78,38 Z" fill="#EF4444"/>
+  <!-- Pot rim -->
+  <rect x="18" y="32" width="64" height="8" rx="4" fill="#DC2626"/>
+  <!-- Handles -->
+  <rect x="8" y="33" width="14" height="6" rx="3" fill="#B91C1C"/>
+  <rect x="78" y="33" width="14" height="6" rx="3" fill="#B91C1C"/>
+  <!-- Pot shine -->
+  <path d="M28,42 L28,58 Q28,68 36,70" fill="none" stroke="#FCA5A5" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+  <!-- Lid knob -->
+  <ellipse cx="50" cy="28" rx="6" ry="4" fill="#B91C1C"/>
+  <!-- Lid -->
+  <ellipse cx="50" cy="32" rx="28" ry="5" fill="#DC2626"/>
+  <!-- Spoon sticking out -->
+  <line x1="68" y1="26" x2="82" y2="8" stroke="#F59E0B" stroke-width="3.5" stroke-linecap="round"/>
+  <ellipse cx="84" cy="6" rx="4" ry="6" fill="#F59E0B" transform="rotate(-30 84 6)"/>
+  <!-- Bubbles in pot (visible above lid edge) -->
+  <circle cx="40" cy="30" r="2" fill="#FCA5A5" opacity="0.5"/>
+  <circle cx="56" cy="29" r="1.5" fill="#FCA5A5" opacity="0.5"/>
+  <!-- Dots decoration on pot -->
+  <circle cx="38" cy="55" r="3" fill="#FCA5A5" opacity="0.4"/>
+  <circle cx="50" cy="60" r="3" fill="#FCA5A5" opacity="0.4"/>
+  <circle cx="62" cy="52" r="3" fill="#FCA5A5" opacity="0.4"/>
+  <!-- Base/stove grate hint -->
+  <rect x="26" y="80" width="48" height="4" rx="2" fill="#374151"/>
+  <line x1="34" y1="80" x2="34" y2="84" stroke="#4B5563" stroke-width="1"/>
+  <line x1="42" y1="80" x2="42" y2="84" stroke="#4B5563" stroke-width="1"/>
+  <line x1="50" y1="80" x2="50" y2="84" stroke="#4B5563" stroke-width="1"/>
+  <line x1="58" y1="80" x2="58" y2="84" stroke="#4B5563" stroke-width="1"/>
+  <line x1="66" y1="80" x2="66" y2="84" stroke="#4B5563" stroke-width="1"/>
+  <!-- Small flame hints under pot -->
+  <path d="M38,88 Q39,84 40,88" fill="#F97316" stroke="none"/>
+  <path d="M48,87 Q50,83 52,87" fill="#F97316" stroke="none"/>
+  <path d="M58,88 Q59,84 60,88" fill="#F97316" stroke="none"/>
 </svg>

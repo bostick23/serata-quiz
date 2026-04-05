@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Rising chart background -->
+  <polyline points="10,78 30,65 50,55 65,35 80,20" fill="none" stroke="#10B981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Chart area fill -->
+  <polygon points="10,78 30,65 50,55 65,35 80,20 80,78" fill="#10B981" opacity="0.15"/>
+  <!-- Arrow tip on chart -->
+  <polygon points="80,20 74,28 82,28" fill="#10B981"/>
+  <!-- Coin 1 (front, big) -->
+  <circle cx="55" cy="62" r="18" fill="#F59E0B"/>
+  <circle cx="55" cy="62" r="14" fill="none" stroke="#D97706" stroke-width="1.5"/>
+  <text x="55" y="68" font-family="serif" font-weight="bold" font-size="20" fill="#92400E" text-anchor="middle">€</text>
+  <!-- Coin 2 (behind, offset) -->
+  <circle cx="38" cy="72" r="14" fill="#FBBF24"/>
+  <circle cx="38" cy="72" r="10.5" fill="none" stroke="#D97706" stroke-width="1.5"/>
+  <text x="38" y="77.5" font-family="serif" font-weight="bold" font-size="16" fill="#92400E" text-anchor="middle">$</text>
+  <!-- Bar chart small bars on left -->
+  <rect x="8" y="68" width="7" height="14" rx="1.5" fill="#6366F1" opacity="0.7"/>
+  <rect x="17" y="60" width="7" height="22" rx="1.5" fill="#6366F1" opacity="0.8"/>
+  <!-- Grid lines hint -->
+  <line x1="8" y1="82" x2="88" y2="82" stroke="#CBD5E1" stroke-width="1"/>
+  <line x1="8" y1="70" x2="28" y2="70" stroke="#CBD5E1" stroke-width="0.5" opacity="0.4"/>
+  <!-- Small sparkle near arrow -->
+  <line x1="86" y1="14" x2="86" y2="22" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="82" y1="18" x2="90" y2="18" stroke="#F59E0B" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

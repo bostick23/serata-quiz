@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Owl body -->
+  <ellipse cx="50" cy="58" rx="28" ry="30" fill="#7C3AED" opacity="0.85"/>
+  <!-- Ear tufts -->
+  <polygon points="28,30 22,12 38,26" fill="#7C3AED"/>
+  <polygon points="72,30 78,12 62,26" fill="#7C3AED"/>
+  <!-- Face disc -->
+  <ellipse cx="50" cy="48" rx="22" ry="18" fill="#EDE9FE"/>
+  <!-- Left eye ring -->
+  <circle cx="40" cy="46" r="10" fill="#DDD6FE" stroke="#5B21B6" stroke-width="2"/>
+  <!-- Right eye ring -->
+  <circle cx="60" cy="46" r="10" fill="#DDD6FE" stroke="#5B21B6" stroke-width="2"/>
+  <!-- Left pupil -->
+  <circle cx="41" cy="45" r="4.5" fill="#1E1B4B"/>
+  <circle cx="42.5" cy="43.5" r="1.5" fill="white"/>
+  <!-- Right pupil -->
+  <circle cx="61" cy="45" r="4.5" fill="#1E1B4B"/>
+  <circle cx="62.5" cy="43.5" r="1.5" fill="white"/>
+  <!-- Beak -->
+  <polygon points="50,52 46,57 54,57" fill="#F59E0B"/>
+  <!-- Graduation cap -->
+  <polygon points="50,16 20,28 50,40 80,28" fill="#1E1B4B"/>
+  <rect x="46" y="16" width="8" height="4" rx="1" fill="#1E1B4B"/>
+  <line x1="74" y1="30" x2="74" y2="40" stroke="#1E1B4B" stroke-width="2"/>
+  <circle cx="74" cy="42" r="2.5" fill="#F59E0B"/>
+  <!-- Feet -->
+  <path d="M38,86 Q35,90 32,88 M38,86 Q38,91 35,90 M38,86 Q41,90 38,90" stroke="#F59E0B" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M62,86 Q59,90 56,88 M62,86 Q62,91 59,90 M62,86 Q65,90 62,90" stroke="#F59E0B" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Wing detail left -->
+  <path d="M24,55 Q28,62 26,72 Q30,68 32,72" fill="none" stroke="#5B21B6" stroke-width="2" stroke-linecap="round"/>
+  <!-- Wing detail right -->
+  <path d="M76,55 Q72,62 74,72 Q70,68 68,72" fill="none" stroke="#5B21B6" stroke-width="2" stroke-linecap="round"/>
+</svg>

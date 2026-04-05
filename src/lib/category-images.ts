@@ -17,6 +17,8 @@ const categoryImages: Record<string, string> = {
   "Cultura Generale": "/categories/brain.svg",
   "Lingue straniere": "/categories/lingue straniere.apng",
   "Videogiochi": "/categories/gamepad.svg",
+  "Filosofia": "/categories/philosophy.svg",
+  "Economia": "/categories/economy.svg",
     // English (OpenTDB)
   "General Knowledge": "/categories/brain.svg",
   "Entertainment: Books": "/categories/book.svg",

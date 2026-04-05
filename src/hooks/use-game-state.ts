@@ -2,16 +2,14 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { Socket } from "socket.io-client";
-import type { GameState, RankingEntry } from "@/types/game";
+import type { GameState } from "@/types/game";
 
 const initialState: GameState = {
   joinCode: "",
   phase: "lobby",
   language: "it",
-  currentRound: 0,
   currentQuestion: 0,
-  totalRounds: 0,
-  questionsPerRound: 0,
+  numQuestions: 0,
   teams: [],
 };
 
@@ -20,7 +18,6 @@ export function useGameState(socket: Socket | null, joinCode: string) {
   const [deadline, setDeadline] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [answeredTeams, setAnsweredTeams] = useState<Set<string>>(new Set());
-  const [revealedEntries, setRevealedEntries] = useState<RankingEntry[]>([]);
 
   useEffect(() => {
     if (!socket) return;
@@ -44,18 +41,16 @@ export function useGameState(socket: Socket | null, joinCode: string) {
       }));
     });
 
-    socket.on("question:category", ({ category, questionNumber, totalQuestions, roundNumber, deadline: d }) => {
-      setGameState(prev => ({ ...prev, phase: "category", currentRound: roundNumber, currentQuestion: questionNumber, correctIndex: undefined, rankings: undefined, isLastQuestion: undefined, categoryName: category }));
+    socket.on("question:category", ({ category, questionNumber, totalQuestions, deadline: d }) => {
+      setGameState(prev => ({ ...prev, phase: "category", currentQuestion: questionNumber, correctIndex: undefined, rankings: undefined, isLastQuestion: undefined, categoryName: category }));
       setDeadline(d);
       setAnsweredTeams(new Set());
-      setRevealedEntries([]);
     });
 
     socket.on("question:show", ({ question, phase, deadline: d }) => {
-      setGameState(prev => ({ ...prev, phase: "read", question, currentRound: question.roundNumber, correctIndex: undefined, rankings: undefined, isLastQuestion: undefined }));
+      setGameState(prev => ({ ...prev, phase: "read", question, correctIndex: undefined, rankings: undefined, isLastQuestion: undefined }));
       setDeadline(d);
       setAnsweredTeams(new Set());
-      setRevealedEntries([]);
     });
 
     socket.on("question:answer-phase", ({ deadline: d }) => {
@@ -70,17 +65,6 @@ export function useGameState(socket: Socket | null, joinCode: string) {
     socket.on("question:results", ({ rankings, correctIndex, isLastQuestion }) => {
       setGameState(prev => ({ ...prev, phase: "results", rankings, correctIndex, isLastQuestion }));
       setDeadline(null);
-    });
-
-    socket.on("round:end", ({ round, rankings }) => {
-      setGameState(prev => ({ ...prev, phase: "round-end", currentRound: round, rankings, revealedPositions: 0 }));
-      setDeadline(null);
-      setRevealedEntries([]);
-    });
-
-    socket.on("reveal:position", ({ position, entry }) => {
-      setRevealedEntries(prev => [entry, ...prev]);
-      setGameState(prev => ({ ...prev, revealedPositions: position }));
     });
 
     socket.on("game:finished", ({ rankings }) => {
@@ -107,13 +91,11 @@ export function useGameState(socket: Socket | null, joinCode: string) {
       socket.off("question:answer-phase");
       socket.off("answer:received");
       socket.off("question:results");
-      socket.off("round:end");
-      socket.off("reveal:position");
       socket.off("game:finished");
       socket.off("game:cancelled");
       socket.off("error");
     };
   }, [socket]);
 
-  return { gameState, deadline, error, answeredTeams, revealedEntries, setError };
+  return { gameState, deadline, error, answeredTeams, setError };
 }

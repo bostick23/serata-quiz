@@ -7,8 +7,7 @@ import { generateJoinCode } from "@/lib/utils/join-code";
 import { eq, or, isNull, desc, and, inArray } from "drizzle-orm";
 
 const createGameSchema = z.object({
-  numRounds: z.number().int().min(1).max(10),
-  questionsPerRound: z.number().int().min(1).max(20),
+  numQuestions: z.number().int().min(1).max(50),
   language: z.enum(["it", "en"]).default("it"),
   categories: z.array(z.string()).optional(),
 });
@@ -38,8 +37,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const { numRounds, questionsPerRound, language, categories } = parsed.data;
-    const totalQuestions = numRounds * questionsPerRound;
+    const { numQuestions, language, categories } = parsed.data;
+    const totalQuestions = numQuestions;
 
     const categoryFilter =
       categories && categories.length > 0
@@ -75,16 +74,14 @@ export async function POST(request: Request) {
         hostId: session.user.id,
         joinCode,
         language,
-        numRounds,
-        questionsPerRound,
+        numQuestions,
       })
       .returning();
 
     const gameQuestionValues = shuffled.map((q, index) => ({
       gameId: game.id,
       questionId: q.id,
-      roundNumber: Math.floor(index / questionsPerRound) + 1,
-      position: (index % questionsPerRound) + 1,
+      position: index + 1,
     }));
 
     await db.insert(gameQuestions).values(gameQuestionValues);

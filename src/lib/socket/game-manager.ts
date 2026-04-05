@@ -13,19 +13,15 @@ interface ActiveGame {
   hostSocketId: string | null;
   language: string;
   phase: GamePhase;
-  currentRound: number;
   currentQuestionIndex: number;
-  totalRounds: number;
-  questionsPerRound: number;
+  numQuestions: number;
   teams: Map<string, TeamInfo & { socketId: string }>;
   currentQuestion: QuestionData | null;
   currentCorrectIndex: number;
   answerPhaseStart: number;
   answeredTeams: Set<string>;
-  questionsList: Array<{ gameQuestionId: string; questionId: string; roundNumber: number; position: number }>;
+  questionsList: Array<{ gameQuestionId: string; questionId: string; position: number }>;
   timer: ReturnType<typeof setTimeout> | null;
-  revealedPositions: number;
-  roundRankings: RankingEntry[];
 }
 
 const activeGames = new Map<string, ActiveGame>();
@@ -41,12 +37,11 @@ export async function createActiveGame(joinCode: string, gameId: string, hostId:
     .select({
       gameQuestionId: gameQuestions.id,
       questionId: gameQuestions.questionId,
-      roundNumber: gameQuestions.roundNumber,
       position: gameQuestions.position,
     })
     .from(gameQuestions)
     .where(eq(gameQuestions.gameId, gameId))
-    .orderBy(gameQuestions.roundNumber, gameQuestions.position);
+    .orderBy(gameQuestions.position);
 
   const existingTeams = await db.select().from(teams).where(eq(teams.gameId, gameId));
 
@@ -57,10 +52,8 @@ export async function createActiveGame(joinCode: string, gameId: string, hostId:
     hostSocketId: null,
     language: game.language ?? "it",
     phase: "lobby",
-    currentRound: 0,
     currentQuestionIndex: 0,
-    totalRounds: game.numRounds,
-    questionsPerRound: game.questionsPerRound,
+    numQuestions: game.numQuestions,
     teams: new Map(),
     currentQuestion: null,
     currentCorrectIndex: -1,
@@ -68,8 +61,6 @@ export async function createActiveGame(joinCode: string, gameId: string, hostId:
     answeredTeams: new Set(),
     questionsList: questionRows,
     timer: null,
-    revealedPositions: 0,
-    roundRankings: [],
   };
 
   for (const t of existingTeams) {
@@ -101,15 +92,11 @@ function getGameState(game: ActiveGame) {
     joinCode: game.joinCode,
     phase: game.phase,
     language: game.language,
-    currentRound: game.currentRound,
     currentQuestion: game.currentQuestionIndex,
-    totalRounds: game.totalRounds,
-    questionsPerRound: game.questionsPerRound,
+    numQuestions: game.numQuestions,
     teams: Array.from(game.teams.values()).map(({ socketId, ...rest }) => rest),
     question: game.currentQuestion ?? undefined,
-    correctIndex: game.phase === "results" || game.phase === "round-end" ? game.currentCorrectIndex : undefined,
-    rankings: game.roundRankings.length > 0 ? game.roundRankings : undefined,
-    revealedPositions: game.revealedPositions,
+    correctIndex: game.phase === "results" ? game.currentCorrectIndex : undefined,
   };
 }
 
@@ -193,53 +180,30 @@ export function setupSocketHandlers(io: Server) {
       }
 
       game.phase = "read";
-      game.currentRound = 1;
       game.currentQuestionIndex = 1;
 
-      await db.update(games).set({ status: "playing", currentRound: 1, currentQuestionIndex: 1 }).where(eq(games.id, game.gameId));
+      await db.update(games).set({ status: "playing", currentQuestionIndex: 1 }).where(eq(games.id, game.gameId));
 
       await loadAndShowQuestion(io, game);
     });
 
     socket.on("question:next", async ({ joinCode }) => {
       const game = activeGames.get(joinCode);
-      if (!game || (game.phase !== "results" && game.phase !== "round-end")) return;
+      if (!game || game.phase !== "results") return;
 
-      const currentRoundQuestions = game.questionsList.filter(q => q.roundNumber === game.currentRound);
-      const isLastQuestionInRound = game.currentQuestionIndex >= currentRoundQuestions.length;
+      const isLastQuestion = game.currentQuestionIndex >= game.numQuestions;
 
-      // If last question and still in results phase, go to round-end reveal first
-      if (isLastQuestionInRound && game.phase === "results") {
-        game.phase = "round-end";
-        const overallRankings = await computeOverallRankings(game);
-        game.roundRankings = overallRankings;
-        game.revealedPositions = 0;
-        io.to(getRoomName(joinCode)).emit("round:end", {
-          round: game.currentRound,
-          rankings: overallRankings,
-        });
+      if (isLastQuestion) {
+        // Last question -> finish game
+        game.phase = "finished";
+        const rankings = await computeOverallRankings(game);
+        await db.update(games).set({ status: "finished" }).where(eq(games.id, game.gameId));
+        io.to(getRoomName(joinCode)).emit("game:finished", { rankings });
+        removeActiveGame(joinCode);
         return;
       }
 
-      // If in round-end (all positions revealed), move to next round or finish
-      if (isLastQuestionInRound && game.phase === "round-end") {
-        if (game.currentRound >= game.totalRounds) {
-          game.phase = "finished";
-          const rankings = await computeOverallRankings(game);
-          game.roundRankings = rankings;
-          await db.update(games).set({ status: "finished" }).where(eq(games.id, game.gameId));
-          io.to(getRoomName(joinCode)).emit("game:finished", { rankings });
-          removeActiveGame(joinCode);
-          return;
-        }
-        game.currentRound++;
-        game.currentQuestionIndex = 1;
-        game.phase = "read";
-        await loadAndShowQuestion(io, game);
-        return;
-      }
-
-      // Not last question — just go to next question
+      // Next question
       game.currentQuestionIndex++;
       game.phase = "read";
       await loadAndShowQuestion(io, game);
@@ -278,39 +242,13 @@ export function setupSocketHandlers(io: Server) {
         const currentQ = game.questionsList[game.currentQuestionIndex - 1];
         const rankings = await computeQuestionRankings(game, currentQ.gameQuestionId);
 
-        const currentRoundQuestions = game.questionsList.filter(qq => qq.roundNumber === game.currentRound);
-        const isLastQuestion = game.currentQuestionIndex >= currentRoundQuestions.length;
+        const isLastQuestion = game.currentQuestionIndex >= game.numQuestions;
 
         io.to(getRoomName(joinCode)).emit("question:results", {
           rankings,
           correctIndex: game.currentCorrectIndex,
           isLastQuestion,
         });
-
-        // Don't immediately jump to round-end; let host click "Classifica finale"
-      }
-    });
-
-    socket.on("reveal:next", async ({ joinCode }) => {
-      const game = activeGames.get(joinCode);
-      if (!game || game.phase !== "round-end") return;
-
-      if (game.revealedPositions < game.roundRankings.length) {
-        const idx = game.roundRankings.length - 1 - game.revealedPositions;
-        game.revealedPositions++;
-        io.to(getRoomName(joinCode)).emit("reveal:position", {
-          position: game.revealedPositions,
-          entry: game.roundRankings[idx],
-        });
-      }
-
-      if (game.revealedPositions >= game.roundRankings.length) {
-        if (game.currentRound >= game.totalRounds) {
-          game.phase = "finished";
-          await db.update(games).set({ status: "finished" }).where(eq(games.id, game.gameId));
-          io.to(getRoomName(joinCode)).emit("game:finished", { rankings: game.roundRankings });
-          removeActiveGame(joinCode);
-        }
       }
     });
 
@@ -374,23 +312,20 @@ export function setupSocketHandlers(io: Server) {
 
 async function loadAndShowQuestion(io: Server, game: ActiveGame) {
   const q = game.questionsList.find(
-    (q) => q.roundNumber === game.currentRound && q.position === game.currentQuestionIndex
+    (q) => q.position === game.currentQuestionIndex
   );
   if (!q) return;
 
   const [questionData] = await db.select().from(questions).where(eq(questions.id, q.questionId));
   if (!questionData) return;
 
-  const roundQuestions = game.questionsList.filter(qq => qq.roundNumber === game.currentRound);
-
   game.currentQuestion = {
     gameQuestionId: q.gameQuestionId,
     category: questionData.category ?? "Generale",
     text: questionData.text,
     choices: questionData.choices,
-    roundNumber: game.currentRound,
     position: game.currentQuestionIndex,
-    totalQuestions: roundQuestions.length,
+    totalQuestions: game.numQuestions,
   };
   game.currentCorrectIndex = questionData.correctIndex;
   game.answeredTeams = new Set();
@@ -403,13 +338,12 @@ async function loadAndShowQuestion(io: Server, game: ActiveGame) {
   io.to(getRoomName(game.joinCode)).emit("question:category", {
     category: game.currentQuestion.category,
     questionNumber: game.currentQuestionIndex,
-    totalQuestions: roundQuestions.length,
-    roundNumber: game.currentRound,
+    totalQuestions: game.numQuestions,
     deadline: categoryDeadline,
   });
 
   game.timer = setTimeout(() => {
-    // Phase 2: Show question text for 10 seconds
+    // Phase 2: Show question text for READ_TIME_MS
     game.phase = "read";
     const readDeadline = Date.now() + READ_TIME_MS;
     io.to(getRoomName(game.joinCode)).emit("question:show", {
@@ -418,7 +352,7 @@ async function loadAndShowQuestion(io: Server, game: ActiveGame) {
       deadline: readDeadline,
     });
 
-      // Phase 3: Answer phase for 10 seconds
+      // Phase 3: Answer phase for ANSWER_TIME_MS
       game.timer = setTimeout(() => {
         game.phase = "answer";
         game.answerPhaseStart = Date.now();
@@ -429,16 +363,13 @@ async function loadAndShowQuestion(io: Server, game: ActiveGame) {
           game.phase = "results";
           const rankings = await computeQuestionRankings(game, q.gameQuestionId);
 
-          const currentRoundQuestions = game.questionsList.filter(qq => qq.roundNumber === game.currentRound);
-          const isLastQuestion = game.currentQuestionIndex >= currentRoundQuestions.length;
+          const isLastQuestion = game.currentQuestionIndex >= game.numQuestions;
 
           io.to(getRoomName(game.joinCode)).emit("question:results", {
             rankings,
             correctIndex: game.currentCorrectIndex,
             isLastQuestion,
           });
-
-          // Don't immediately jump to round-end; let host click "Classifica finale"
         }, ANSWER_TIME_MS);
       }, READ_TIME_MS);
     }, CATEGORY_TIME_MS);

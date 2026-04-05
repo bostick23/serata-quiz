@@ -15,7 +15,7 @@ interface Props {
 export default function HostPage({ params }: Props) {
   const { joinCode } = use(params);
   const { socket, isConnected } = useSocket();
-  const { gameState, deadline, error, answeredTeams, revealedEntries } = useGameState(socket, joinCode);
+  const { gameState, deadline, error, answeredTeams } = useGameState(socket, joinCode);
   const { seconds } = useCountdown(deadline ?? null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [joinUrl, setJoinUrl] = useState("");
@@ -108,10 +108,6 @@ export default function HostPage({ params }: Props) {
 
   function handleNextQuestion() {
     socket?.emit("question:next", { joinCode });
-  }
-
-  function handleRevealNext() {
-    socket?.emit("reveal:next", { joinCode });
   }
 
   function handleCancel() {
@@ -261,7 +257,7 @@ export default function HostPage({ params }: Props) {
             className="flex-1 flex flex-col items-center justify-center p-8"
           >
             <div className="text-slate-400 mb-4 text-sm">
-              Manche {gameState.currentRound} - Domanda {gameState.currentQuestion}/{gameState.questionsPerRound}
+              Domanda {gameState.currentQuestion}/{gameState.numQuestions}
             </div>
 
             <motion.div
@@ -306,7 +302,7 @@ export default function HostPage({ params }: Props) {
             </div>
 
             <div className="text-slate-400 mb-2 text-sm">
-              Manche {gameState.question.roundNumber} - Domanda {gameState.question.position}/{gameState.question.totalQuestions}
+              Domanda {gameState.question.position}/{gameState.question.totalQuestions}
             </div>
 
             {/* Countdown */}
@@ -453,7 +449,7 @@ export default function HostPage({ params }: Props) {
 
             {/* Rankings side by side */}
             {gameState.rankings && (
-              <div className={`w-full max-w-5xl flex flex-col ${!gameState.isLastQuestion ? "lg:flex-row" : ""} gap-6 mb-6`}>
+              <div className="w-full max-w-5xl flex flex-col lg:flex-row gap-6 mb-6">
                 {/* Question ranking (sorted by questionScore) */}
                 <div className="flex-1 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
                   <h3 className="text-lg font-semibold mb-4 text-center text-amber-400">Punteggi domanda</h3>
@@ -490,36 +486,34 @@ export default function HostPage({ params }: Props) {
                   </div>
                 </div>
 
-                {/* Overall ranking (only if NOT last question of the round) */}
-                {!gameState.isLastQuestion && (
-                  <div className="flex-1 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
-                    <h3 className="text-lg font-semibold mb-4 text-center text-purple-400">Classifica generale</h3>
-                    <div className="space-y-2">
-                      {[...gameState.rankings]
-                        .sort((a, b) => b.totalScore - a.totalScore)
-                        .map((entry, i) => (
-                        <motion.div
-                          key={entry.teamId}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: 0.5 + i * 0.1 }}
-                          className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50"
-                        >
-                          <span className="text-2xl font-bold text-slate-400 w-8">{i + 1}</span>
-                          {entry.photoUrl ? (
-                            <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
-                              {entry.teamName.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <span className="flex-1 font-medium">{entry.teamName}</span>
-                          <span className="text-lg font-bold text-purple-400">{entry.totalScore}</span>
-                        </motion.div>
-                      ))}
-                    </div>
+                {/* Overall ranking */}
+                <div className="flex-1 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-xl">
+                  <h3 className="text-lg font-semibold mb-4 text-center text-purple-400">Classifica generale</h3>
+                  <div className="space-y-2">
+                    {[...gameState.rankings]
+                      .sort((a, b) => b.totalScore - a.totalScore)
+                      .map((entry, i) => (
+                      <motion.div
+                        key={entry.teamId}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.5 + i * 0.1 }}
+                        className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50"
+                      >
+                        <span className="text-2xl font-bold text-slate-400 w-8">{i + 1}</span>
+                        {entry.photoUrl ? (
+                          <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
+                            {entry.teamName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span className="flex-1 font-medium">{entry.teamName}</span>
+                        <span className="text-lg font-bold text-purple-400">{entry.totalScore}</span>
+                      </motion.div>
+                    ))}
                   </div>
-                )}
+                </div>
               </div>
             )}
 
@@ -530,97 +524,6 @@ export default function HostPage({ params }: Props) {
             >
               {gameState.isLastQuestion ? "Classifica finale →" : "Prossima domanda →"}
             </button>
-          </motion.div>
-        )}
-
-        {/* ROUND-END PHASE - Dramatic reveal */}
-        {gameState.phase === "round-end" && (
-          <motion.div
-            key="round-end"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col items-center justify-center p-8 select-none"
-            onClick={() => {
-              const allRevealed = gameState.rankings && revealedEntries.length >= gameState.rankings.length;
-              if (!allRevealed) handleRevealNext();
-            }}
-            style={{ cursor: gameState.rankings && revealedEntries.length >= gameState.rankings.length ? "default" : "pointer" }}
-          >
-            <motion.h1
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-4xl sm:text-5xl font-extrabold gradient-text mb-12 text-center"
-            >
-              Classifica Manche {gameState.currentRound}
-            </motion.h1>
-
-            <div className="max-w-xl w-full space-y-4">
-              <AnimatePresence>
-                {revealedEntries.map((entry, i) => {
-                  const totalTeams = gameState.rankings?.length ?? 0;
-                  const position = totalTeams - revealedEntries.length + 1 + i;
-                  const isFirst = position === 1;
-                  const isSecond = position === 2;
-                  const isThird = position === 3;
-                  return (
-                    <motion.div
-                      key={entry.teamId}
-                      initial={{ opacity: 0, x: -100, scale: 0.8 }}
-                      animate={{ opacity: 1, x: 0, scale: 1 }}
-                      transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                      className={`flex items-center gap-4 p-5 rounded-2xl border shadow-lg ${
-                        isFirst
-                          ? "bg-amber-400/20 border-amber-400/50 shadow-amber-400/20"
-                          : isSecond
-                          ? "bg-slate-300/10 border-slate-400/30"
-                          : isThird
-                          ? "bg-orange-600/10 border-orange-500/30"
-                          : "bg-slate-800 border-slate-700"
-                      }`}
-                    >
-                      <span className={`text-4xl font-extrabold ${
-                        isFirst ? "text-amber-400" : isSecond ? "text-slate-300" : isThird ? "text-orange-500" : "text-slate-500"
-                      }`}>
-                        {position}
-                      </span>
-                      {entry.photoUrl ? (
-                        <img src={entry.photoUrl} alt={entry.teamName} className="w-14 h-14 rounded-full object-cover border-2 border-purple-500" />
-                      ) : (
-                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
-                          {entry.teamName.charAt(0).toUpperCase()}
-                        </div>
-                      )}
-                      <span className="flex-1 text-xl font-bold">{entry.teamName}</span>
-                      <span className="text-2xl font-bold text-purple-400">{entry.totalScore}</span>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-
-            {revealedEntries.length === 0 && (
-              <p className="text-slate-400 text-lg animate-pulse mt-8">Clicca per rivelare la classifica...</p>
-            )}
-
-            {revealedEntries.length > 0 && gameState.rankings && revealedEntries.length < gameState.rankings.length && (
-              <p className="text-slate-500 text-sm mt-8 animate-pulse">Clicca per la prossima posizione...</p>
-            )}
-
-            {gameState.rankings && revealedEntries.length >= gameState.rankings.length && (
-              <motion.button
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNextQuestion();
-                }}
-                className="mt-8 px-8 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-lg shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all"
-              >
-                {gameState.currentRound >= gameState.totalRounds ? "Classifica finale" : `Manche ${gameState.currentRound + 1}`}
-              </motion.button>
-            )}
           </motion.div>
         )}
 

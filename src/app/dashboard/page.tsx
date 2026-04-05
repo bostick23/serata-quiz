@@ -10,8 +10,7 @@ interface Game {
   id: string;
   joinCode: string;
   status: "lobby" | "playing" | "finished";
-  numRounds: number;
-  questionsPerRound: number;
+  numQuestions: number;
   createdAt: string;
 }
 
@@ -32,8 +31,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [games, setGames] = useState<Game[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [numRounds, setNumRounds] = useState(3);
-  const [questionsPerRound, setQuestionsPerRound] = useState(5);
+  const [numQuestions, setNumQuestions] = useState(15);
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -102,7 +100,7 @@ export default function DashboardPage() {
       const res = await fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ numRounds, questionsPerRound, language, categories }),
+        body: JSON.stringify({ numQuestions, language, categories }),
       });
 
       const data = await res.json();
@@ -223,40 +221,20 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="numRounds" className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Numero di manche (1-10)
-                      </label>
-                      <input
-                        id="numRounds"
-                        type="number"
-                        min={1}
-                        max={10}
-                        value={numRounds}
-                        onChange={(e) => setNumRounds(Number(e.target.value))}
-                        className="w-full px-4 py-3 rounded-xl bg-slate-700 border border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="questionsPerRound" className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Domande per manche (1-20)
-                      </label>
-                      <input
-                        id="questionsPerRound"
-                        type="number"
-                        min={1}
-                        max={20}
-                        value={questionsPerRound}
-                        onChange={(e) => setQuestionsPerRound(Number(e.target.value))}
-                        className="w-full px-4 py-3 rounded-xl bg-slate-700 border border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                      />
-                    </div>
+                  <div>
+                    <label htmlFor="numQuestions" className="block text-sm font-medium text-slate-300 mb-1.5">
+                      Numero di domande (1-50)
+                    </label>
+                    <input
+                      id="numQuestions"
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={numQuestions}
+                      onChange={(e) => setNumQuestions(Number(e.target.value))}
+                      className="w-full px-4 py-3 rounded-xl bg-slate-700 border border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    />
                   </div>
-
-                  <p className="text-slate-400 text-sm">
-                    Totale domande necessarie: {numRounds * questionsPerRound}
-                  </p>
 
                   {/* Advanced options */}
                   <div>
@@ -392,7 +370,7 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       <p className="text-slate-400 text-sm mt-1">
-                        {game.numRounds} manche, {game.questionsPerRound} domande per manche
+                        {game.numQuestions} domande
                       </p>
                       <p className="text-slate-500 text-xs mt-0.5">
                         {new Date(game.createdAt).toLocaleDateString("it-IT", {

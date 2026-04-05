@@ -46,9 +46,7 @@ export const games = pgTable("games", {
   joinCode: varchar("join_code", { length: 8 }).notNull().unique(),
   status: gameStatusEnum("status").default("lobby").notNull(),
   language: varchar("language", { length: 5 }).default("it").notNull(),
-  numRounds: smallint("num_rounds").notNull(),
-  questionsPerRound: smallint("questions_per_round").notNull(),
-  currentRound: smallint("current_round").default(0).notNull(),
+  numQuestions: smallint("num_questions").notNull(),
   currentQuestionIndex: smallint("current_question_index").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -57,11 +55,10 @@ export const gameQuestions = pgTable("game_questions", {
   id: uuid("id").defaultRandom().primaryKey(),
   gameId: uuid("game_id").references(() => games.id).notNull(),
   questionId: uuid("question_id").references(() => questions.id).notNull(),
-  roundNumber: smallint("round_number").notNull(),
   position: smallint("position").notNull(),
   startedAt: timestamp("started_at"),
 }, (table) => [
-  uniqueIndex("game_round_position_idx").on(table.gameId, table.roundNumber, table.position),
+  uniqueIndex("game_position_idx").on(table.gameId, table.position),
 ]);
 
 export const teams = pgTable("teams", {

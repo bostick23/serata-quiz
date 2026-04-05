@@ -14,7 +14,7 @@ interface Props {
 export default function PlayPage({ params }: Props) {
   const { joinCode } = use(params);
   const { socket, isConnected } = useSocket();
-  const { gameState, deadline, error, revealedEntries } = useGameState(socket, joinCode);
+  const { gameState, deadline, error } = useGameState(socket, joinCode);
   const { seconds } = useCountdown(deadline ?? null);
 
   const [teamName, setTeamName] = useState("");
@@ -261,7 +261,7 @@ export default function PlayPage({ params }: Props) {
             className="flex-1 flex flex-col items-center justify-center p-4"
           >
             <div className="text-slate-400 text-sm mb-4">
-              Manche {gameState.currentRound} - Domanda {gameState.currentQuestion}/{gameState.questionsPerRound}
+              Domanda {gameState.currentQuestion}/{gameState.numQuestions}
             </div>
 
             <motion.div
@@ -305,7 +305,7 @@ export default function PlayPage({ params }: Props) {
           >
             <div className="text-center mb-4">
               <span className="text-slate-400 text-sm">
-                Manche {gameState.question.roundNumber} - Domanda {gameState.question.position}/{gameState.question.totalQuestions}
+                Domanda {gameState.question.position}/{gameState.question.totalQuestions}
               </span>
             </div>
 
@@ -419,23 +419,6 @@ export default function PlayPage({ params }: Props) {
             ) : (
               <p className="text-slate-400">In attesa dei risultati...</p>
             )}
-          </motion.div>
-        )}
-
-        {/* ROUND-END PHASE */}
-        {joined && gameState.phase === "round-end" && (
-          <motion.div
-            key="round-end"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col items-center justify-center p-6"
-          >
-            <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin mb-6" />
-            <h2 className="text-2xl font-bold gradient-text mb-2">Classifica in corso...</h2>
-            <p className="text-slate-400 text-center">
-              Guarda lo schermo dell&apos;host!
-            </p>
           </motion.div>
         )}
 

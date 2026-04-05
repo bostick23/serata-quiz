@@ -5,7 +5,6 @@ export const EVENTS = {
   GAME_START: "game:start",
   QUESTION_NEXT: "question:next",
   ANSWER_SUBMIT: "answer:submit",
-  REVEAL_NEXT: "reveal:next",
   REQUEST_STATE: "game:request-state",
 
   // Server -> Client
@@ -17,8 +16,6 @@ export const EVENTS = {
   QUESTION_ANSWER_PHASE: "question:answer-phase",
   ANSWER_RECEIVED: "answer:received",
   QUESTION_RESULTS: "question:results",
-  ROUND_END: "round:end",
-  REVEAL_POSITION: "reveal:position",
   GAME_FINISHED: "game:finished",
   ERROR: "error",
 } as const;

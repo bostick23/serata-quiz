@@ -1,4 +1,4 @@
-export type GamePhase = "lobby" | "category" | "read" | "answer" | "results" | "round-end" | "finished" | "cancelled";
+export type GamePhase = "lobby" | "category" | "read" | "answer" | "results" | "finished" | "cancelled";
 
 export interface TeamInfo {
   id: string;
@@ -12,7 +12,6 @@ export interface QuestionData {
   category: string;
   text: string;
   choices: string[];
-  roundNumber: number;
   position: number;
   totalQuestions: number;
 }
@@ -31,10 +30,8 @@ export interface GameState {
   joinCode: string;
   phase: GamePhase;
   language: string;
-  currentRound: number;
   currentQuestion: number;
-  totalRounds: number;
-  questionsPerRound: number;
+  numQuestions: number;
   teams: TeamInfo[];
   question?: QuestionData;
   deadline?: number;
@@ -42,5 +39,4 @@ export interface GameState {
   correctIndex?: number;
   isLastQuestion?: boolean;
   categoryName?: string;
-  revealedPositions?: number;
 }

@@ -36,7 +36,6 @@ export async function GET(
     const gameQuestionsData = await db
       .select({
         id: gameQuestions.id,
-        roundNumber: gameQuestions.roundNumber,
         position: gameQuestions.position,
         startedAt: gameQuestions.startedAt,
         question: {

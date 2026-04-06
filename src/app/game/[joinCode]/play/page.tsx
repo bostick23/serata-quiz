@@ -14,7 +14,7 @@ interface Props {
 export default function PlayPage({ params }: Props) {
   const { joinCode } = use(params);
   const { socket, isConnected } = useSocket();
-  const { gameState, deadline, error, rankingsRevealed } = useGameState(socket, joinCode);
+  const { gameState, deadline, error, rankingsRevealed, setError } = useGameState(socket, joinCode);
   const { seconds } = useCountdown(deadline ?? null);
 
   const [teamName, setTeamName] = useState("");
@@ -174,7 +174,7 @@ export default function PlayPage({ params }: Props) {
                 </label>
                 <input
                   value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
+                  onChange={(e) => { setTeamName(e.target.value); setError(null); }}
                   required
                   maxLength={50}
                   className="w-full px-4 py-4 rounded-xl bg-slate-800 border border-slate-700 text-white text-lg placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"

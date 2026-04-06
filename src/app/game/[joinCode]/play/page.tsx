@@ -409,7 +409,7 @@ export default function PlayPage({ params }: Props) {
                   Totale: {myRanking.totalScore} punti
                 </p>
 
-                {myPosition !== undefined && myPosition !== -1 && (
+                {myPosition !== undefined && myPosition !== -1 && !gameState.isLastQuestion && (
                   <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
                     <p className="text-slate-400 text-sm">Posizione</p>
                     <p className="text-3xl font-bold">{myPosition + 1}&deg;</p>

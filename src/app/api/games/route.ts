@@ -86,7 +86,28 @@ export async function POST(request: Request) {
       );
     }
 
-    const shuffled = shuffle(availableQuestions).slice(0, totalQuestions);
+    // Select questions with max 2 per category
+    const shuffledAll = shuffle(availableQuestions);
+    const categoryCounts = new Map<string, number>();
+    const shuffled: typeof availableQuestions = [];
+    for (const q of shuffledAll) {
+      const cat = q.category ?? "unknown";
+      const count = categoryCounts.get(cat) ?? 0;
+      if (count >= 2) continue;
+      categoryCounts.set(cat, count + 1);
+      shuffled.push(q);
+      if (shuffled.length >= totalQuestions) break;
+    }
+
+    if (shuffled.length < totalQuestions) {
+      const hint = avoidRepeat ? " Prova a disattivare 'Evita ripetizioni'." : "";
+      return NextResponse.json(
+        {
+          error: `Non ci sono abbastanza domande con il limite di 2 per categoria. Servono ${totalQuestions}, selezionabili ${shuffled.length}.${hint}`,
+        },
+        { status: 400 }
+      );
+    }
     const joinCode = generateJoinCode();
 
     const [game] = await db

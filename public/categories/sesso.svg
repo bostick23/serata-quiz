@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#be185d"/>
+      <stop offset="100%" stop-color="#e11d48"/>
+    </linearGradient>
+    <linearGradient id="heart" x1="30" y1="20" x2="90" y2="95" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fda4af"/>
+      <stop offset="100%" stop-color="#fb7185"/>
+    </linearGradient>
+    <linearGradient id="flame1" x1="45" y1="50" x2="60" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="60%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+    <linearGradient id="flame2" x1="55" y1="55" x2="70" y2="95" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="56" fill="url(#bg)" opacity="0.15"/>
+  <circle cx="60" cy="60" r="56" stroke="url(#bg)" stroke-width="2.5" fill="none" opacity="0.4"/>
+  <!-- Heart shape -->
+  <path d="M60 95 C60 95 20 65 20 42 C20 28 30 18 42 18 C50 18 56 23 60 30 C64 23 70 18 78 18 C90 18 100 28 100 42 C100 65 60 95 60 95Z" fill="url(#heart)" opacity="0.9"/>
+  <!-- Flame inside heart (passion) -->
+  <path d="M60 88 C60 88 42 70 42 58 C42 50 48 46 52 50 C54 52 54 48 52 44 C50 38 54 32 60 36 C66 32 70 38 68 44 C66 48 66 52 68 50 C72 46 78 50 78 58 C78 70 60 88 60 88Z" fill="url(#flame1)" opacity="0.85"/>
+  <path d="M60 82 C60 82 50 70 50 62 C50 57 54 55 57 58 C59 60 59 56 58 53 C57 50 60 46 60 50 C60 46 63 50 62 53 C61 56 61 60 63 58 C66 55 70 57 70 62 C70 70 60 82 60 82Z" fill="url(#flame2)" opacity="0.9"/>
+  <!-- Tiny sparkles -->
+  <circle cx="32" cy="30" r="2" fill="#fda4af" opacity="0.7"/>
+  <circle cx="88" cy="30" r="2" fill="#fda4af" opacity="0.7"/>
+  <circle cx="25" cy="55" r="1.5" fill="#fda4af" opacity="0.5"/>
+  <circle cx="95" cy="55" r="1.5" fill="#fda4af" opacity="0.5"/>
+  <circle cx="40" cy="15" r="1.5" fill="#fbbf24" opacity="0.6"/>
+  <circle cx="80" cy="15" r="1.5" fill="#fbbf24" opacity="0.6"/>
+</svg>

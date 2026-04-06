@@ -8,6 +8,7 @@ import { eq, or, isNull, desc, and, inArray, notInArray, gte, sql } from "drizzl
 
 const createGameSchema = z.object({
   numQuestions: z.number().int().min(1).max(50),
+  maxPerCategory: z.number().int().min(1).max(50).default(2),
   language: z.enum(["it", "en"]).default("it"),
   categories: z.array(z.string()).optional(),
   avoidRepeat: z.boolean().default(false),
@@ -29,16 +30,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
 
     const body = await request.json();
+    console.log("[API] Create game body:", JSON.stringify(body));
     const parsed = createGameSchema.safeParse(body);
 
     if (!parsed.success) {
+      console.log("[API] Validation error:", JSON.stringify(parsed.error.issues));
       return NextResponse.json(
         { error: parsed.error.issues[0].message },
         { status: 400 }
       );
     }
 
-    const { numQuestions, language, categories, avoidRepeat } = parsed.data;
+    const { numQuestions, maxPerCategory, language, categories, avoidRepeat } = parsed.data;
     const totalQuestions = numQuestions;
 
     const categoryFilter =
@@ -93,7 +96,7 @@ export async function POST(request: Request) {
     for (const q of shuffledAll) {
       const cat = q.category ?? "unknown";
       const count = categoryCounts.get(cat) ?? 0;
-      if (count >= 2) continue;
+      if (count >= maxPerCategory) continue;
       categoryCounts.set(cat, count + 1);
       shuffled.push(q);
       if (shuffled.length >= totalQuestions) break;
@@ -103,7 +106,7 @@ export async function POST(request: Request) {
       const hint = avoidRepeat ? " Prova a disattivare 'Evita ripetizioni'." : "";
       return NextResponse.json(
         {
-          error: `Non ci sono abbastanza domande con il limite di 2 per categoria. Servono ${totalQuestions}, selezionabili ${shuffled.length}.${hint}`,
+          error: `Non ci sono abbastanza domande con il limite di ${maxPerCategory} per categoria. Servono ${totalQuestions}, selezionabili ${shuffled.length}.${hint}`,
         },
         { status: 400 }
       );

@@ -21,10 +21,12 @@ export default function HostPage({ params }: Props) {
   const [joinUrl, setJoinUrl] = useState("");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [revealedCount, setRevealedCount] = useState(0);
+  const [actionPending, setActionPending] = useState(false);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
 
-  // Reset reveal counter when entering finished phase
+  // Reset pending state on any phase change (server responded)
   useEffect(() => {
+    setActionPending(false);
     if (gameState.phase === "finished") {
       setRevealedCount(0);
     }
@@ -111,10 +113,14 @@ export default function HostPage({ params }: Props) {
   }, [gameState.phase, joinCode]);
 
   function handleStart() {
+    if (actionPending) return;
+    setActionPending(true);
     socket?.emit("game:start", { joinCode });
   }
 
   function handleNextQuestion() {
+    if (actionPending) return;
+    setActionPending(true);
     socket?.emit("question:next", { joinCode });
   }
 
@@ -245,9 +251,10 @@ export default function HostPage({ params }: Props) {
                 {gameState.teams.length >= 1 && (
                   <button
                     onClick={handleStart}
-                    className="mt-6 w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-xl shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all"
+                    disabled={actionPending}
+                    className="mt-6 w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-xl shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:pointer-events-none"
                   >
-                    Inizia Partita
+                    {actionPending ? "Avvio..." : "Inizia Partita"}
                   </button>
                 )}
               </div>
@@ -530,7 +537,8 @@ export default function HostPage({ params }: Props) {
             {/* Next question button — fixed top-right */}
             <button
               onClick={handleNextQuestion}
-              className="fixed top-4 right-4 z-50 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-base shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all"
+              disabled={actionPending}
+              className="fixed top-4 right-4 z-50 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-base shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:pointer-events-none"
             >
               {gameState.isLastQuestion ? "Classifica finale →" : "Prossima domanda →"}
             </button>

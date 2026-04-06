@@ -22,6 +22,7 @@ interface ActiveGame {
   answeredTeams: Set<string>;
   questionsList: Array<{ gameQuestionId: string; questionId: string; position: number }>;
   timer: ReturnType<typeof setTimeout> | null;
+  transitioning: boolean;
 }
 
 const activeGames = new Map<string, ActiveGame>();
@@ -70,6 +71,7 @@ export async function createActiveGame(joinCode: string, gameId: string, hostId:
     answeredTeams: new Set(),
     questionsList: questionRows,
     timer: null,
+    transitioning: false,
   };
 
   for (const t of existingTeams) {
@@ -182,37 +184,47 @@ export function setupSocketHandlers(io: Server) {
 
     socket.on("game:start", async ({ joinCode }) => {
       const game = activeGames.get(joinCode);
-      if (!game || game.phase !== "lobby") return;
+      if (!game || game.phase !== "lobby" || game.transitioning) return;
       if (game.teams.size < 1) {
         socket.emit("error", { message: "Serve almeno una squadra" });
         return;
       }
 
-      game.currentQuestionIndex = 1;
-      await db.update(games).set({ status: "playing", currentQuestionIndex: 1 }).where(eq(games.id, game.gameId));
-
-      await loadAndShowQuestion(io, game);
+      game.transitioning = true;
+      try {
+        game.currentQuestionIndex = 1;
+        await db.update(games).set({ status: "playing", currentQuestionIndex: 1 }).where(eq(games.id, game.gameId));
+        await loadAndShowQuestion(io, game);
+      } finally {
+        game.transitioning = false;
+      }
     });
 
     socket.on("question:next", async ({ joinCode }) => {
       const game = activeGames.get(joinCode);
-      if (!game || game.phase !== "results") return;
+      if (!game || game.phase !== "results" || game.transitioning) return;
 
-      const isLastQuestion = game.currentQuestionIndex >= game.numQuestions;
+      game.transitioning = true;
 
-      if (isLastQuestion) {
-        // Last question -> finish game
-        game.phase = "finished";
-        const rankings = await computeOverallRankings(game);
-        await db.update(games).set({ status: "finished" }).where(eq(games.id, game.gameId));
-        io.to(getRoomName(joinCode)).emit("game:finished", { rankings });
-        removeActiveGame(joinCode);
-        return;
+      try {
+        const isLastQuestion = game.currentQuestionIndex >= game.numQuestions;
+
+        if (isLastQuestion) {
+          // Last question -> finish game
+          game.phase = "finished";
+          const rankings = await computeOverallRankings(game);
+          await db.update(games).set({ status: "finished" }).where(eq(games.id, game.gameId));
+          io.to(getRoomName(joinCode)).emit("game:finished", { rankings });
+          removeActiveGame(joinCode);
+          return;
+        }
+
+        // Advance to next question — index and phase change happen inside loadAndShowQuestion
+        const nextIndex = game.currentQuestionIndex + 1;
+        await loadAndShowQuestion(io, game, nextIndex);
+      } finally {
+        game.transitioning = false;
       }
-
-      // Advance to next question — index and phase change happen inside loadAndShowQuestion
-      const nextIndex = game.currentQuestionIndex + 1;
-      await loadAndShowQuestion(io, game, nextIndex);
     });
 
     socket.on("answer:submit", async ({ joinCode, gameQuestionId, chosenIndex }) => {

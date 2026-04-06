@@ -32,6 +32,7 @@ export default function DashboardPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [numQuestions, setNumQuestions] = useState(15);
+  const [maxPerCategory, setMaxPerCategory] = useState(2);
   const [avoidRepeat, setAvoidRepeat] = useState(true);
   const [language, setLanguage] = useState<"it" | "en">("it");
   const [creating, setCreating] = useState(false);
@@ -101,7 +102,7 @@ export default function DashboardPage() {
       const res = await fetch("/api/games", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ numQuestions, language, categories, avoidRepeat }),
+        body: JSON.stringify({ numQuestions, maxPerCategory, language, categories, avoidRepeat }),
       });
 
       const data = await res.json();
@@ -222,10 +223,10 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 items-end">
                     <div>
                       <label htmlFor="numQuestions" className="block text-sm font-medium text-slate-300 mb-1.5">
-                        Numero di domande (1-50)
+                        Domande (1-50)
                       </label>
                       <input
                         id="numQuestions"
@@ -238,7 +239,22 @@ export default function DashboardPage() {
                       />
                     </div>
 
-                    <label className="flex items-center gap-3 cursor-pointer group px-4 py-3 rounded-xl bg-slate-700 border border-slate-600 hover:border-slate-500 transition-all">
+                    <div>
+                      <label htmlFor="maxPerCategory" className="block text-sm font-medium text-slate-300 mb-1.5">
+                        Max per categoria
+                      </label>
+                      <input
+                        id="maxPerCategory"
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={maxPerCategory}
+                        onChange={(e) => setMaxPerCategory(Number(e.target.value))}
+                        className="w-full px-4 py-3 rounded-xl bg-slate-700 border border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                      />
+                    </div>
+
+                    <label className="flex items-center gap-3 cursor-pointer group px-4 py-3 rounded-xl bg-slate-700 border border-slate-600 hover:border-slate-500 transition-all col-span-2 sm:col-span-1">
                       <button
                         type="button"
                         role="switch"

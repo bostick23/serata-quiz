@@ -6,6 +6,7 @@ import { useGameState } from "@/hooks/use-game-state";
 import { useCountdown } from "@/hooks/use-countdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { getCategoryImage } from "@/lib/category-images";
+import { AdBanner } from "@/components/ad-banner";
 
 interface Props {
   params: Promise<{ joinCode: string }>;
@@ -248,6 +249,8 @@ export default function PlayPage({ params }: Props) {
                 ))}
               </div>
             </div>
+
+            <AdBanner key="ad-lobby" className="mt-6 max-w-sm" />
           </motion.div>
         )}
 
@@ -343,7 +346,7 @@ export default function PlayPage({ params }: Props) {
             </div>
 
             {selectedAnswer !== null ? (
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex-1 flex flex-col items-center justify-center">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
@@ -355,6 +358,7 @@ export default function PlayPage({ params }: Props) {
                   <p className="text-lg font-semibold">Risposta inviata!</p>
                   <p className="text-slate-400 text-sm mt-1">In attesa degli altri...</p>
                 </motion.div>
+                <AdBanner key={`ad-answer-${gameState.question?.gameQuestionId}`} className="mt-4" />
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3 flex-1">
@@ -419,6 +423,8 @@ export default function PlayPage({ params }: Props) {
             ) : (
               <p className="text-slate-400">In attesa dei risultati...</p>
             )}
+
+            <AdBanner key={`ad-results-${gameState.currentQuestion}`} className="mt-6 max-w-sm" />
           </motion.div>
         )}
 

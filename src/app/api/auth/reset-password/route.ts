@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { users, passwordResetTokens } from "@/lib/db/schema";
+import { db } from "@/lib/firebase";
+import { usersCol, uniqueEmailsCol, passwordResetTokensCol } from "@/lib/firebase/collections";
 import { hashPassword } from "@/lib/auth/helpers";
-import { eq, and } from "drizzle-orm";
 
 const schema = z.object({
   email: z.string().email("Email non valida"),
@@ -23,40 +22,35 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email, code, newPassword } = parsed.data;
+    const { email: rawEmail, code, newPassword } = parsed.data;
+    const email = rawEmail.toLowerCase().trim();
 
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
-
-    if (!user) {
+    const emailDoc = await uniqueEmailsCol().doc(email).get();
+    if (!emailDoc.exists) {
       return NextResponse.json(
         { error: "Codice non valido o scaduto" },
         { status: 400 }
       );
     }
 
-    const [token] = await db
-      .select()
-      .from(passwordResetTokens)
-      .where(
-        and(
-          eq(passwordResetTokens.userId, user.id),
-          eq(passwordResetTokens.code, code)
-        )
-      )
-      .limit(1);
+    const { userId } = emailDoc.data()!;
 
-    if (!token) {
+    // Find matching token
+    const tokensSnap = await passwordResetTokensCol(userId)
+      .where("code", "==", code)
+      .limit(1)
+      .get();
+
+    if (tokensSnap.empty) {
       return NextResponse.json(
         { error: "Codice non valido o scaduto" },
         { status: 400 }
       );
     }
 
-    if (token.expiresAt < new Date()) {
+    const token = tokensSnap.docs[0].data();
+
+    if (token.expiresAt.toDate() < new Date()) {
       return NextResponse.json(
         { error: "Codice scaduto. Richiedi un nuovo codice." },
         { status: 400 }
@@ -65,14 +59,13 @@ export async function POST(request: Request) {
 
     const passwordHash = await hashPassword(newPassword);
 
-    await db
-      .update(users)
-      .set({ passwordHash })
-      .where(eq(users.id, user.id));
+    await usersCol().doc(userId).update({ passwordHash });
 
-    await db
-      .delete(passwordResetTokens)
-      .where(eq(passwordResetTokens.userId, user.id));
+    // Delete all reset tokens
+    const allTokens = await passwordResetTokensCol(userId).get();
+    const batch = db.batch();
+    allTokens.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { questions } from "@/lib/db/schema";
+import { questionsCol } from "@/lib/firebase/collections";
 import { auth } from "@/lib/auth/config";
-import { eq, or, isNull, isNotNull, and } from "drizzle-orm";
 
 export async function GET(request: Request) {
   try {
@@ -13,20 +11,25 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const language = searchParams.get("language") ?? "it";
 
-    const rows = await db
-      .selectDistinct({ category: questions.category })
-      .from(questions)
-      .where(
-        and(
-          eq(questions.language, language),
-          or(isNull(questions.ownerId), eq(questions.ownerId, session.user.id)),
-          isNotNull(questions.category)
-        )
-      );
+    // Two queries: public + user's own, filtered by language
+    const [publicSnap, userSnap] = await Promise.all([
+      questionsCol()
+        .where("ownerId", "==", null)
+        .where("language", "==", language)
+        .get(),
+      questionsCol()
+        .where("ownerId", "==", session.user.id)
+        .where("language", "==", language)
+        .get(),
+    ]);
 
-    const categories = rows
-      .map((r) => r.category as string)
-      .sort((a, b) => a.localeCompare(b));
+    const categorySet = new Set<string>();
+    for (const doc of [...publicSnap.docs, ...userSnap.docs]) {
+      const cat = doc.data().category;
+      if (cat) categorySet.add(cat);
+    }
+
+    const categories = [...categorySet].sort((a, b) => a.localeCompare(b));
 
     return NextResponse.json(categories);
   } catch (error) {

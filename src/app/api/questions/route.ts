@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { questions } from "@/lib/db/schema";
+import { questionsCol } from "@/lib/firebase/collections";
 import { auth } from "@/lib/auth/config";
-import { eq, or, isNull, desc } from "drizzle-orm";
+import { Timestamp } from "firebase-admin/firestore";
 
 const createQuestionSchema = z.object({
   text: z.string().min(1, "Il testo della domanda è obbligatorio"),
@@ -21,15 +20,20 @@ export async function GET() {
     if (!session?.user?.id)
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
 
-    const userQuestions = await db
-      .select()
-      .from(questions)
-      .where(
-        or(isNull(questions.ownerId), eq(questions.ownerId, session.user.id))
-      )
-      .orderBy(desc(questions.createdAt));
+    // Two queries: public (ownerId null) + user's own
+    const [publicSnap, userSnap] = await Promise.all([
+      questionsCol().where("ownerId", "==", null).get(),
+      questionsCol().where("ownerId", "==", session.user.id).get(),
+    ]);
 
-    return NextResponse.json(userQuestions);
+    const allQuestions = [
+      ...publicSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.() ?? new Date() })),
+      ...userSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.() ?? new Date() })),
+    ];
+
+    allQuestions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return NextResponse.json(allQuestions);
   } catch (error) {
     console.error("Get questions error:", error);
     return NextResponse.json(
@@ -64,18 +68,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const [question] = await db
-      .insert(questions)
-      .values({
-        ownerId: session.user.id,
-        text,
-        choices,
-        correctIndex,
-        category: category ?? null,
-      })
-      .returning();
+    const ref = questionsCol().doc();
+    const data = {
+      ownerId: session.user.id,
+      text,
+      choices,
+      correctIndex,
+      category: category ?? null,
+      language: "it" as string,
+      createdAt: Timestamp.now(),
+    };
+    await ref.set(data);
 
-    return NextResponse.json(question, { status: 201 });
+    return NextResponse.json({ id: ref.id, ...data, createdAt: new Date() }, { status: 201 });
   } catch (error) {
     console.error("Create question error:", error);
     return NextResponse.json(

@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { questions } from "@/lib/db/schema";
+import { questionsCol } from "@/lib/firebase/collections";
 import { auth } from "@/lib/auth/config";
-import { eq, and } from "drizzle-orm";
 
 const updateQuestionSchema = z.object({
   text: z.string().min(1).optional(),
@@ -13,13 +11,11 @@ const updateQuestionSchema = z.object({
 });
 
 async function getQuestionIfAuthorized(questionId: string, userId: string, userRole: string) {
-  const [question] = await db
-    .select()
-    .from(questions)
-    .where(eq(questions.id, questionId))
-    .limit(1);
+  const doc = await questionsCol().doc(questionId).get();
 
-  if (!question) return { error: "Domanda non trovata", status: 404 };
+  if (!doc.exists) return { error: "Domanda non trovata", status: 404 };
+
+  const question = { id: doc.id, ...doc.data()! };
 
   if (question.ownerId !== userId && userRole !== "admin") {
     return { error: "Non autorizzato a modificare questa domanda", status: 403 };
@@ -66,13 +62,10 @@ export async function PUT(
       }
     }
 
-    const [updated] = await db
-      .update(questions)
-      .set(data)
-      .where(eq(questions.id, id))
-      .returning();
+    await questionsCol().doc(id).update(data);
+    const updated = await questionsCol().doc(id).get();
 
-    return NextResponse.json(updated);
+    return NextResponse.json({ id, ...updated.data() });
   } catch (error) {
     console.error("Update question error:", error);
     return NextResponse.json(
@@ -99,7 +92,7 @@ export async function DELETE(
       return NextResponse.json({ error: result.error }, { status: result.status });
     }
 
-    await db.delete(questions).where(eq(questions.id, id));
+    await questionsCol().doc(id).delete();
 
     return NextResponse.json({ success: true });
   } catch (error) {

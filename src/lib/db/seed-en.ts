@@ -1,15 +1,9 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
-import postgres from "postgres";
-import { drizzle } from "drizzle-orm/postgres-js";
-import { eq, and } from "drizzle-orm";
-import { questions } from "./schema";
+import { Timestamp } from "firebase-admin/firestore";
+import { questionsCol } from "../firebase/collections";
 import { decode } from "html-entities";
-
-const connectionString = process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/serata_quiz";
-const client = postgres(connectionString);
-const db = drizzle(client);
 
 const CATEGORIES_URL = "https://opentdb.com/api_category.php";
 const API_URL = "https://opentdb.com/api.php";
@@ -92,13 +86,13 @@ async function seed() {
         const incorrectAnswers = q.incorrect_answers.map(a => decode(a));
 
         // Check for duplicate
-        const existing = await db
-          .select({ id: questions.id })
-          .from(questions)
-          .where(and(eq(questions.text, text), eq(questions.language, "en")))
-          .limit(1);
+        const existingSnap = await questionsCol()
+          .where("text", "==", text)
+          .where("language", "==", "en")
+          .limit(1)
+          .get();
 
-        if (existing.length > 0) {
+        if (!existingSnap.empty) {
           totalSkipped++;
           continue;
         }
@@ -107,13 +101,14 @@ async function seed() {
         const allChoices = shuffle([correctAnswer, ...incorrectAnswers]);
         const correctIndex = allChoices.indexOf(correctAnswer);
 
-        await db.insert(questions).values({
+        await questionsCol().doc().set({
           ownerId: null,
           category: q.category,
           language: "en",
           text,
           choices: allChoices,
           correctIndex,
+          createdAt: Timestamp.now(),
         });
 
         catInserted++;
@@ -128,7 +123,6 @@ async function seed() {
 
   console.log(`\nDone! Inserted ${totalInserted} English questions, skipped ${totalSkipped} duplicates.`);
 
-  await client.end();
   process.exit(0);
 }
 

@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { games, teams, gameQuestions, questions } from "@/lib/db/schema";
+import { gamesCol, teamsCol, gameQuestionsCol, questionsCol } from "@/lib/firebase/collections";
 import { auth } from "@/lib/auth/config";
-import { eq } from "drizzle-orm";
 
 export async function GET(
   _request: Request,
@@ -15,43 +13,53 @@ export async function GET(
 
     const { id } = await params;
 
-    const [game] = await db
-      .select()
-      .from(games)
-      .where(eq(games.id, id))
-      .limit(1);
+    const gameDoc = await gamesCol().doc(id).get();
 
-    if (!game) {
+    if (!gameDoc.exists) {
       return NextResponse.json(
         { error: "Gioco non trovato" },
         { status: 404 }
       );
     }
 
-    const gameTeams = await db
-      .select()
-      .from(teams)
-      .where(eq(teams.gameId, id));
+    const game = { id: gameDoc.id, ...gameDoc.data()! };
 
-    const gameQuestionsData = await db
-      .select({
-        id: gameQuestions.id,
-        position: gameQuestions.position,
-        startedAt: gameQuestions.startedAt,
-        question: {
-          id: questions.id,
-          text: questions.text,
-          choices: questions.choices,
-          correctIndex: questions.correctIndex,
-          category: questions.category,
-        },
+    // Fetch teams and gameQuestions in parallel
+    const [teamsSnap, gqSnap] = await Promise.all([
+      teamsCol(id).get(),
+      gameQuestionsCol(id).orderBy("position").get(),
+    ]);
+
+    const gameTeams = teamsSnap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
+    }));
+
+    // Fetch question details for each gameQuestion
+    const gameQuestionsData = await Promise.all(
+      gqSnap.docs.map(async (gqDoc) => {
+        const gq = gqDoc.data();
+        const qDoc = await questionsCol().doc(gq.questionId).get();
+        const q = qDoc.data();
+        return {
+          id: gqDoc.id,
+          position: gq.position,
+          startedAt: gq.startedAt?.toDate?.() ?? null,
+          question: q ? {
+            id: qDoc.id,
+            text: q.text,
+            choices: q.choices,
+            correctIndex: q.correctIndex,
+            category: q.category,
+          } : null,
+        };
       })
-      .from(gameQuestions)
-      .innerJoin(questions, eq(gameQuestions.questionId, questions.id))
-      .where(eq(gameQuestions.gameId, id));
+    );
 
     return NextResponse.json({
       ...game,
+      createdAt: game.createdAt?.toDate?.() ?? new Date(),
       teams: gameTeams,
       questions: gameQuestionsData,
     });

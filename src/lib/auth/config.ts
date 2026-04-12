@@ -1,8 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { eq } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { uniqueEmailsCol, usersCol } from "@/lib/firebase/collections";
 import { verifyPassword } from "./helpers";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -16,16 +14,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const email = credentials.email as string;
+        const email = (credentials.email as string).toLowerCase().trim();
         const password = credentials.password as string;
 
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.email, email))
-          .limit(1);
+        // Look up userId via uniqueEmails collection
+        const emailDoc = await uniqueEmailsCol().doc(email).get();
+        if (!emailDoc.exists) return null;
 
-        if (!user) return null;
+        const { userId } = emailDoc.data()!;
+        const userDoc = await usersCol().doc(userId).get();
+        if (!userDoc.exists) return null;
+
+        const user = userDoc.data()!;
 
         const isValid = await verifyPassword(password, user.passwordHash);
         if (!isValid) return null;
@@ -33,7 +33,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!user.emailVerified) return null;
 
         return {
-          id: user.id,
+          id: userDoc.id,
           email: user.email,
           name: user.displayName,
           role: user.role,

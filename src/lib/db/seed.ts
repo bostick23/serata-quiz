@@ -1,15 +1,10 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
-import postgres from "postgres";
-import { drizzle } from "drizzle-orm/postgres-js";
-import { eq } from "drizzle-orm";
-import { questions, users } from "./schema";
 import { hashPassword } from "../auth/helpers";
-
-const connectionString = process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/serata_quiz";
-const client = postgres(connectionString);
-const db = drizzle(client);
+import { Timestamp } from "firebase-admin/firestore";
+import { db } from "../firebase";
+import { usersCol, questionsCol, uniqueEmailsCol } from "../firebase/collections";
 
 const quizQuestions = [
   // Geografia
@@ -1188,50 +1183,81 @@ const quizQuestions = [
   { category: "Cultura Generale", text: "Quale popolo antico è famoso per aver inventato la scrittura cuneiforme?", choices: ["Egiziani", "Sumeri", "Fenici", "Greci"], correctIndex: 1 },
 ];
 
+async function createUserIfNotExists(email: string, passwordHash: string, displayName: string, role: "admin" | "host") {
+  const emailDoc = await uniqueEmailsCol().doc(email).get();
+  if (emailDoc.exists) {
+    console.log(`  User ${email} already exists, skipping`);
+    return;
+  }
+  const userRef = usersCol().doc();
+  const batch = db.batch();
+  batch.set(userRef, {
+    email,
+    passwordHash,
+    displayName,
+    role,
+    emailVerified: true,
+    createdAt: Timestamp.now(),
+  });
+  batch.set(uniqueEmailsCol().doc(email), { userId: userRef.id });
+  await batch.commit();
+  console.log(`  Created user ${email} (${userRef.id})`);
+}
+
 async function seed() {
   console.log("Seeding database...");
 
   // Create admin user
   const adminPasswordHash = await hashPassword("admin123");
-  await db.insert(users).values({
-    email: "admin@serataquiz.it",
-    passwordHash: adminPasswordHash,
-    displayName: "Admin",
-    role: "admin",
-    emailVerified: true,
-  }).onConflictDoNothing();
+  await createUserIfNotExists("admin@serataquiz.it", adminPasswordHash, "Admin", "admin");
 
   // Create demo host user
   const hostPasswordHash = await hashPassword("host123");
-  await db.insert(users).values({
-    email: "host@serataquiz.it",
-    passwordHash: hostPasswordHash,
-    displayName: "Demo Host",
-    role: "host",
-    emailVerified: true,
-  }).onConflictDoNothing();
+  await createUserIfNotExists("host@serataquiz.it", hostPasswordHash, "Demo Host", "host");
 
   // Insert questions (global, no owner) — skip duplicates by text
+  // First, fetch all existing question texts to avoid N+1 queries
+  const existingSnap = await questionsCol().where("ownerId", "==", null).where("language", "==", "it").get();
+  const existingTexts = new Set(existingSnap.docs.map(doc => doc.data().text));
+
   let inserted = 0;
+  // Firestore batch limit is 500 operations
+  const BATCH_SIZE = 500;
+  let batch = db.batch();
+  let batchCount = 0;
+
   for (const q of quizQuestions) {
-    const existing = await db.select({ id: questions.id }).from(questions).where(eq(questions.text, q.text)).limit(1);
-    if (existing.length > 0) continue;
-    await db.insert(questions).values({
+    if (existingTexts.has(q.text)) continue;
+
+    const ref = questionsCol().doc();
+    batch.set(ref, {
       ownerId: null,
       category: q.category,
       language: "it",
       text: q.text,
       choices: q.choices,
       correctIndex: q.correctIndex,
+      createdAt: Timestamp.now(),
     });
     inserted++;
+    batchCount++;
+
+    if (batchCount >= BATCH_SIZE) {
+      await batch.commit();
+      console.log(`  Committed batch of ${batchCount} questions...`);
+      batch = db.batch();
+      batchCount = 0;
+    }
+  }
+
+  if (batchCount > 0) {
+    await batch.commit();
   }
 
   console.log(`Seeded ${inserted} new questions (${quizQuestions.length - inserted} already existed)`);
   console.log("Admin: admin@serataquiz.it / admin123");
   console.log("Host:  host@serataquiz.it / host123");
 
-  await client.end();
   process.exit(0);
 }
 

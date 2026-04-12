@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { users, verificationTokens } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { db } from "@/lib/firebase";
+import { usersCol, verificationTokensCol } from "@/lib/firebase/collections";
 
 const schema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().min(1),
   code: z.string().length(6),
 });
 
@@ -23,39 +22,35 @@ export async function POST(request: Request) {
 
     const { userId, code } = parsed.data;
 
-    const [token] = await db
-      .select()
-      .from(verificationTokens)
-      .where(
-        and(
-          eq(verificationTokens.userId, userId),
-          eq(verificationTokens.code, code)
-        )
-      )
-      .limit(1);
+    // Find matching token
+    const tokensSnap = await verificationTokensCol(userId)
+      .where("code", "==", code)
+      .limit(1)
+      .get();
 
-    if (!token) {
+    if (tokensSnap.empty) {
       return NextResponse.json(
         { error: "Codice non valido" },
         { status: 400 }
       );
     }
 
-    if (token.expiresAt < new Date()) {
+    const token = tokensSnap.docs[0].data();
+
+    if (token.expiresAt.toDate() < new Date()) {
       return NextResponse.json(
         { error: "Codice scaduto. Richiedi un nuovo codice nella pagina di registrazione." },
         { status: 400 }
       );
     }
 
-    await db
-      .update(users)
-      .set({ emailVerified: true })
-      .where(eq(users.id, userId));
+    // Mark email as verified and delete all tokens
+    await usersCol().doc(userId).update({ emailVerified: true });
 
-    await db
-      .delete(verificationTokens)
-      .where(eq(verificationTokens.userId, userId));
+    const allTokens = await verificationTokensCol(userId).get();
+    const batch = db.batch();
+    allTokens.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
 
     return NextResponse.json({ success: true });
   } catch (error) {

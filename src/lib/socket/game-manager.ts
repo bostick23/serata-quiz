@@ -1,7 +1,7 @@
 import { Server, Socket } from "socket.io";
-import { eq, and, sql, isNull, or } from "drizzle-orm";
-import { db } from "@/lib/db";
-import { games, gameQuestions, questions, teams, answers } from "@/lib/db/schema";
+import { db } from "@/lib/firebase";
+import { gamesCol, gameQuestionsCol, questionsCol, teamsCol, answersCol, uniqueJoinCodesCol } from "@/lib/firebase/collections";
+import { Timestamp } from "firebase-admin/firestore";
 import { calculateScore } from "./scoring";
 import { CATEGORY_TIME_MS, READ_TIME_MS, ANSWER_TIME_MS } from "./events";
 import type { GamePhase, QuestionData, RankingEntry, TeamInfo } from "@/types/game";
@@ -32,24 +32,21 @@ export function getActiveGame(joinCode: string): ActiveGame | undefined {
 }
 
 export async function createActiveGame(joinCode: string, gameId: string, hostId: string): Promise<ActiveGame> {
-  const [game] = await db.select().from(games).where(eq(games.id, gameId));
+  const gameDoc = await gamesCol().doc(gameId).get();
+  const game = gameDoc.data()!;
 
-  const questionRows = await db
-    .select({
-      gameQuestionId: gameQuestions.id,
-      questionId: gameQuestions.questionId,
-      position: gameQuestions.position,
-    })
-    .from(gameQuestions)
-    .where(eq(gameQuestions.gameId, gameId))
-    .orderBy(gameQuestions.position);
+  const gqSnap = await gameQuestionsCol(gameId).orderBy("position").get();
+  const questionRows = gqSnap.docs.map(doc => ({
+    gameQuestionId: doc.id,
+    questionId: doc.data().questionId,
+    position: doc.data().position,
+  }));
 
-  const existingTeams = await db.select().from(teams).where(eq(teams.gameId, gameId));
+  const existingTeamsSnap = await teamsCol(gameId).get();
 
   // Determine phase from DB status and currentQuestionIndex
   let phase: GamePhase = "lobby";
   if (game.status === "playing") {
-    // Game was in progress — restore to results so host can click "next"
     phase = game.currentQuestionIndex > 0 ? "results" : "lobby";
   } else if (game.status === "finished") {
     phase = "finished";
@@ -74,9 +71,10 @@ export async function createActiveGame(joinCode: string, gameId: string, hostId:
     transitioning: false,
   };
 
-  for (const t of existingTeams) {
-    activeGame.teams.set(t.id, {
-      id: t.id,
+  for (const doc of existingTeamsSnap.docs) {
+    const t = doc.data();
+    activeGame.teams.set(doc.id, {
+      id: doc.id,
       name: t.name,
       photoUrl: t.photoUrl,
       connected: false,
@@ -122,12 +120,19 @@ export function setupSocketHandlers(io: Server) {
       console.log(`[Socket] Host join: ${socket.id} -> ${joinCode}`);
       let game = activeGames.get(joinCode);
       if (!game) {
-        const [dbGame] = await db.select().from(games).where(eq(games.joinCode, joinCode));
-        if (!dbGame) {
+        // Look up game by joinCode via the lookup collection
+        const joinCodeDoc = await uniqueJoinCodesCol().doc(joinCode).get();
+        if (!joinCodeDoc.exists) {
           socket.emit("error", { message: "Partita non trovata" });
           return;
         }
-        game = await createActiveGame(joinCode, dbGame.id, dbGame.hostId);
+        const gameId = joinCodeDoc.data()!.gameId;
+        const gameDoc = await gamesCol().doc(gameId).get();
+        if (!gameDoc.exists) {
+          socket.emit("error", { message: "Partita non trovata" });
+          return;
+        }
+        game = await createActiveGame(joinCode, gameId, gameDoc.data()!.hostId);
       }
       game.hostSocketId = socket.id;
       socket.join(getRoomName(joinCode));
@@ -150,17 +155,21 @@ export function setupSocketHandlers(io: Server) {
         }
         existingTeam.connected = true;
         existingTeam.socketId = socket.id;
-        await db.update(teams).set({ socketId: socket.id }).where(eq(teams.id, existingTeam.id));
+        await teamsCol(game.gameId).doc(existingTeam.id).update({ socketId: socket.id });
       } else {
-        const [newTeam] = await db
-          .insert(teams)
-          .values({ gameId: game.gameId, name: teamName, photoUrl: photoUrl || null, socketId: socket.id })
-          .returning();
+        const teamRef = teamsCol(game.gameId).doc();
+        const teamData = {
+          name: teamName,
+          photoUrl: photoUrl || null,
+          socketId: socket.id,
+          createdAt: Timestamp.now(),
+        };
+        await teamRef.set(teamData);
 
-        game.teams.set(newTeam.id, {
-          id: newTeam.id,
-          name: newTeam.name,
-          photoUrl: newTeam.photoUrl,
+        game.teams.set(teamRef.id, {
+          id: teamRef.id,
+          name: teamName,
+          photoUrl: teamData.photoUrl,
           connected: true,
           socketId: socket.id,
         });
@@ -193,7 +202,7 @@ export function setupSocketHandlers(io: Server) {
       game.transitioning = true;
       try {
         game.currentQuestionIndex = 1;
-        await db.update(games).set({ status: "playing", currentQuestionIndex: 1 }).where(eq(games.id, game.gameId));
+        await gamesCol().doc(game.gameId).update({ status: "playing", currentQuestionIndex: 1 });
         await loadAndShowQuestion(io, game);
       } finally {
         game.transitioning = false;
@@ -210,16 +219,14 @@ export function setupSocketHandlers(io: Server) {
         const isLastQuestion = game.currentQuestionIndex >= game.numQuestions;
 
         if (isLastQuestion) {
-          // Last question -> finish game
           game.phase = "finished";
           const rankings = await computeOverallRankings(game);
-          await db.update(games).set({ status: "finished" }).where(eq(games.id, game.gameId));
+          await gamesCol().doc(game.gameId).update({ status: "finished" });
           io.to(getRoomName(joinCode)).emit("game:finished", { rankings });
           removeActiveGame(joinCode);
           return;
         }
 
-        // Advance to next question — index and phase change happen inside loadAndShowQuestion
         const nextIndex = game.currentQuestionIndex + 1;
         await loadAndShowQuestion(io, game, nextIndex);
       } finally {
@@ -240,13 +247,14 @@ export function setupSocketHandlers(io: Server) {
       const isCorrect = chosenIndex === game.currentCorrectIndex;
       const score = calculateScore(isCorrect, elapsedMs);
 
-      await db.insert(answers).values({
+      const answerRef = answersCol(game.gameId).doc();
+      await answerRef.set({
         gameQuestionId,
         teamId,
         chosenIndex,
-        answeredAt: new Date(),
+        answeredAt: Timestamp.now(),
         score,
-      }).onConflictDoNothing();
+      });
 
       io.to(getRoomName(joinCode)).emit("answer:received", { teamId });
 
@@ -273,32 +281,20 @@ export function setupSocketHandlers(io: Server) {
     socket.on("game:cancel", async ({ joinCode }) => {
       const game = activeGames.get(joinCode);
       if (!game) return;
-      // Only the host can cancel
       if (game.hostSocketId !== socket.id) return;
 
-      // Clear any running timers
       if (game.timer) clearTimeout(game.timer);
 
-      // Notify all clients in the room before cleanup
       io.to(getRoomName(joinCode)).emit("game:cancelled", {
         message: "La partita è stata annullata dall'host.",
       });
 
-      // Delete from DB (order matters: answers → teams + gameQuestions → game)
-      const teamIds = await db.select({ id: teams.id }).from(teams).where(eq(teams.gameId, game.gameId));
-      if (teamIds.length > 0) {
-        const gqIds = await db.select({ id: gameQuestions.id }).from(gameQuestions).where(eq(gameQuestions.gameId, game.gameId));
-        if (gqIds.length > 0) {
-          for (const gq of gqIds) {
-            await db.delete(answers).where(eq(answers.gameQuestionId, gq.id));
-          }
-        }
-        await db.delete(teams).where(eq(teams.gameId, game.gameId));
-      }
-      await db.delete(gameQuestions).where(eq(gameQuestions.gameId, game.gameId));
-      await db.delete(games).where(eq(games.id, game.gameId));
+      // Delete game and all subcollections with recursiveDelete, plus joinCode lookup
+      await Promise.all([
+        db.recursiveDelete(gamesCol().doc(game.gameId)),
+        uniqueJoinCodesCol().doc(game.joinCode).delete(),
+      ]);
 
-      // Remove from active games
       activeGames.delete(joinCode);
     });
 
@@ -350,11 +346,12 @@ async function loadAndShowQuestion(io: Server, game: ActiveGame, questionIndex?:
     return;
   }
 
-  const [questionData] = await db.select().from(questions).where(eq(questions.id, q.questionId));
-  if (!questionData) {
+  const questionDoc = await questionsCol().doc(q.questionId).get();
+  if (!questionDoc.exists) {
     console.error(`[Game ${game.joinCode}] Question data not found in DB for questionId ${q.questionId}`);
     return;
   }
+  const questionData = questionDoc.data()!;
 
   // Only update state AFTER we confirmed the question exists
   game.currentQuestionIndex = idx;
@@ -369,9 +366,11 @@ async function loadAndShowQuestion(io: Server, game: ActiveGame, questionIndex?:
   game.currentCorrectIndex = questionData.correctIndex;
   game.answeredTeams = new Set();
 
-  // Persist progress to DB so server restarts don't lose it
-  await db.update(games).set({ currentQuestionIndex: idx }).where(eq(games.id, game.gameId));
-  await db.update(gameQuestions).set({ startedAt: new Date() }).where(eq(gameQuestions.id, q.gameQuestionId));
+  // Persist progress to DB
+  await Promise.all([
+    gamesCol().doc(game.gameId).update({ currentQuestionIndex: idx }),
+    gameQuestionsCol(game.gameId).doc(q.gameQuestionId).update({ startedAt: Timestamp.now() }),
+  ]);
 
   // Phase 1: Show category for 5 seconds
   game.phase = "category";
@@ -418,24 +417,24 @@ async function loadAndShowQuestion(io: Server, game: ActiveGame, questionIndex?:
 
 async function computeQuestionRankings(game: ActiveGame, gameQuestionId: string): Promise<RankingEntry[]> {
   const teamList = Array.from(game.teams.values());
-  const answerRows = await db
-    .select()
-    .from(answers)
-    .where(eq(answers.gameQuestionId, gameQuestionId));
 
-  const answerMap = new Map(answerRows.map(a => [a.teamId, a]));
+  // Fetch answers for this question and all answers for the game in parallel
+  const [questionAnswersSnap, allAnswersSnap] = await Promise.all([
+    answersCol(game.gameId).where("gameQuestionId", "==", gameQuestionId).get(),
+    answersCol(game.gameId).get(),
+  ]);
 
-  const allAnswers = await db
-    .select({
-      teamId: answers.teamId,
-      totalScore: sql<number>`sum(${answers.score})::int`,
-    })
-    .from(answers)
-    .innerJoin(gameQuestions, eq(answers.gameQuestionId, gameQuestions.id))
-    .where(eq(gameQuestions.gameId, game.gameId))
-    .groupBy(answers.teamId);
+  const answerMap = new Map(questionAnswersSnap.docs.map(doc => {
+    const a = doc.data();
+    return [a.teamId, a];
+  }));
 
-  const totalScoreMap = new Map(allAnswers.map(a => [a.teamId, a.totalScore]));
+  // Compute total scores per team from all answers
+  const totalScoreMap = new Map<string, number>();
+  for (const doc of allAnswersSnap.docs) {
+    const a = doc.data();
+    totalScoreMap.set(a.teamId, (totalScoreMap.get(a.teamId) ?? 0) + a.score);
+  }
 
   const rankings: RankingEntry[] = teamList.map(team => {
     const answer = answerMap.get(team.id);
@@ -457,17 +456,13 @@ async function computeQuestionRankings(game: ActiveGame, gameQuestionId: string)
 async function computeOverallRankings(game: ActiveGame): Promise<RankingEntry[]> {
   const teamList = Array.from(game.teams.values());
 
-  const allAnswers = await db
-    .select({
-      teamId: answers.teamId,
-      totalScore: sql<number>`sum(${answers.score})::int`,
-    })
-    .from(answers)
-    .innerJoin(gameQuestions, eq(answers.gameQuestionId, gameQuestions.id))
-    .where(eq(gameQuestions.gameId, game.gameId))
-    .groupBy(answers.teamId);
+  const allAnswersSnap = await answersCol(game.gameId).get();
 
-  const totalScoreMap = new Map(allAnswers.map(a => [a.teamId, a.totalScore]));
+  const totalScoreMap = new Map<string, number>();
+  for (const doc of allAnswersSnap.docs) {
+    const a = doc.data();
+    totalScoreMap.set(a.teamId, (totalScoreMap.get(a.teamId) ?? 0) + a.score);
+  }
 
   const rankings: RankingEntry[] = teamList.map(team => ({
     teamId: team.id,

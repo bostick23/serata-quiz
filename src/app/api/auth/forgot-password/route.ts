@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
-import { users, passwordResetTokens } from "@/lib/db/schema";
+import { db } from "@/lib/firebase";
+import { usersCol, uniqueEmailsCol, passwordResetTokensCol } from "@/lib/firebase/collections";
 import { generateCode, sendPasswordResetEmail } from "@/lib/email";
-import { eq } from "drizzle-orm";
+import { Timestamp } from "firebase-admin/firestore";
 
 const schema = z.object({
   email: z.string().email("Email non valida"),
@@ -21,29 +21,38 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email } = parsed.data;
+    const email = parsed.data.email.toLowerCase().trim();
 
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
+    // Look up user via uniqueEmails
+    const emailDoc = await uniqueEmailsCol().doc(email).get();
 
     // Always return success to avoid email enumeration
+    if (!emailDoc.exists) {
+      return NextResponse.json({ success: true });
+    }
+
+    const { userId } = emailDoc.data()!;
+    const userDoc = await usersCol().doc(userId).get();
+    const user = userDoc.data();
+
     if (!user || !user.emailVerified) {
       return NextResponse.json({ success: true });
     }
 
     const code = generateCode();
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    const expiresAt = Timestamp.fromDate(new Date(Date.now() + 30 * 60 * 1000));
 
-    await db
-      .delete(passwordResetTokens)
-      .where(eq(passwordResetTokens.userId, user.id));
+    // Delete old tokens
+    const oldTokens = await passwordResetTokensCol(userId).get();
+    const batch = db.batch();
+    oldTokens.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
 
-    await db
-      .insert(passwordResetTokens)
-      .values({ userId: user.id, code, expiresAt });
+    await passwordResetTokensCol(userId).add({
+      code,
+      expiresAt,
+      createdAt: Timestamp.now(),
+    });
 
     await sendPasswordResetEmail(user.email, code);
 

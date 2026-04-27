@@ -73,6 +73,16 @@ export interface UniqueJoinCodeDoc {
   gameId: string;
 }
 
+export interface TeamRegistrationDoc {
+  teamName: string;
+  email: string;
+  joinCode: string;
+  code: string;
+  codeExpiresAt: Timestamp;
+  verified: boolean;
+  createdAt: Timestamp;
+}
+
 // ---------- Collection helpers ----------
 
 export const usersCol = () =>
@@ -98,6 +108,9 @@ export const uniqueEmailsCol = () =>
 
 export const uniqueJoinCodesCol = () =>
   db.collection("uniqueJoinCodes") as FirebaseFirestore.CollectionReference<UniqueJoinCodeDoc>;
+
+export const teamRegistrationsCol = () =>
+  db.collection("teamRegistrations") as FirebaseFirestore.CollectionReference<TeamRegistrationDoc>;
 
 export const verificationTokensCol = (userId: string) =>
   db.collection(`users/${userId}/verificationTokens`) as FirebaseFirestore.CollectionReference<VerificationTokenDoc>;

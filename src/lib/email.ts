@@ -44,6 +44,28 @@ export async function sendVerificationEmail(to: string, displayName: string, cod
   });
 }
 
+export async function sendTeamRegistrationEmail(to: string, teamName: string, code: string): Promise<void> {
+  const transporter = createTransport();
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM ?? process.env.SMTP_USER,
+    to,
+    subject: "Registra la tua squadra – Serata Quiz",
+    text: `Ciao!\n\nHai richiesto la registrazione della squadra "${teamName}" su Serata Quiz.\n\nIl tuo codice di verifica è: ${code}\n\nIl codice scade tra 30 minuti.\n\nSerata Quiz`,
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto">
+        <h2 style="color:#7c3aed">Serata Quiz</h2>
+        <p>Hai richiesto la registrazione della squadra <strong>${teamName}</strong>.</p>
+        <p>Ecco il tuo codice di verifica:</p>
+        <div style="font-size:2rem;font-weight:bold;letter-spacing:.3rem;text-align:center;padding:16px;background:#f3f4f6;border-radius:8px;margin:16px 0">
+          ${code}
+        </div>
+        <p>Il codice scade tra <strong>30 minuti</strong>.</p>
+        <p style="color:#6b7280;font-size:.875rem">Se non hai richiesto la registrazione, ignora questa email.</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendPasswordResetEmail(to: string, code: string): Promise<void> {
   const transporter = createTransport();
   await transporter.sendMail({

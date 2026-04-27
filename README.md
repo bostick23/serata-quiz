@@ -20,6 +20,52 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Environment Variables
+
+Create a `.env.local` file in the project root with the following variables:
+
+```env
+# Firebase
+FIREBASE_SERVICE_ACCOUNT=<JSON stringified Firebase service account>
+
+# NextAuth
+AUTH_SECRET=<random secret>
+
+# SMTP (required for email verification)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=noreply@example.com
+SMTP_PASS=yourpassword
+SMTP_FROM="Serata Quiz <noreply@example.com>"
+```
+
+> **Note:** The SMTP variables are required for both host account registration (email verification) and the new team email registration flow (see below).
+
+## Team Registration Feature
+
+Players joining a game can choose between two modes:
+
+1. **Guest** – enter a team name and join immediately (existing behaviour, no changes).
+2. **Registra squadra** – enter a team name and email address. A 6-digit verification code is sent to the provided email. After entering the correct code the team joins the game.
+
+### API endpoints added
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/team-registration` | Start team registration. Body: `{ teamName, email, joinCode }`. Returns `{ registrationId }`. |
+| `POST` | `/api/team-registration/verify` | Verify the 6-digit code. Body: `{ registrationId, code }`. Returns `{ success: true, teamName }`. |
+
+### Firestore collection added
+
+`teamRegistrations` – stores temporary registration documents with fields:
+- `teamName`, `email`, `joinCode`
+- `code` (6-digit string), `codeExpiresAt` (30 min TTL)
+- `verified` (boolean)
+- `createdAt`
+
+A resend cooldown of **2 minutes** is enforced per email+joinCode pair to prevent spam.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

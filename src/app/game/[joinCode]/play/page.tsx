@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getCategoryImage } from "@/lib/category-images";
 import { AdBanner } from "@/components/ad-banner";
 
+type JoinMode = "select" | "guest" | "email-register" | "email-verify";
+
 interface Props {
   params: Promise<{ joinCode: string }>;
 }
@@ -25,6 +27,15 @@ export default function PlayPage({ params }: Props) {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [myTeamId, setMyTeamId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Email registration state
+  const [joinMode, setJoinMode] = useState<JoinMode>("select");
+  const [email, setEmail] = useState("");
+  const [registrationId, setRegistrationId] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState("");
+  const [registering, setRegistering] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [regError, setRegError] = useState<string | null>(null);
 
   // Listen for team:joined to confirm our own join and get our teamId
   useEffect(() => {
@@ -60,14 +71,68 @@ export default function PlayPage({ params }: Props) {
     }
   }, [gameState.question?.gameQuestionId]);
 
-  function handleJoin(e: React.FormEvent) {
-    e.preventDefault();
-    if (!socket || !isConnected || !teamName.trim()) return;
-    console.log("[Play] Emitting game:join", { joinCode, teamName: teamName.trim(), connected: socket.connected });
+  function emitJoin(name: string) {
+    if (!socket || !isConnected || !name.trim()) return;
+    console.log("[Play] Emitting game:join", { joinCode, teamName: name.trim(), connected: socket.connected });
     setJoining(true);
-    socket.emit("game:join", { joinCode, teamName: teamName.trim(), photoUrl: photoUrl ?? undefined });
+    socket.emit("game:join", { joinCode, teamName: name.trim(), photoUrl: photoUrl ?? undefined });
     // Unblock button after 10s if server never responds
     setTimeout(() => setJoining(false), 10000);
+  }
+
+  function handleJoin(e: React.FormEvent) {
+    e.preventDefault();
+    emitJoin(teamName);
+  }
+
+  async function handleEmailRegister(e: React.FormEvent) {
+    e.preventDefault();
+    if (!teamName.trim() || !email.trim()) return;
+    setRegError(null);
+    setRegistering(true);
+    try {
+      const res = await fetch("/api/team-registration", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamName: teamName.trim(), email: email.trim(), joinCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRegError(data.error ?? "Errore durante la registrazione");
+        return;
+      }
+      setRegistrationId(data.registrationId);
+      setJoinMode("email-verify");
+    } catch {
+      setRegError("Errore di rete. Riprova.");
+    } finally {
+      setRegistering(false);
+    }
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!registrationId || verificationCode.length !== 6) return;
+    setRegError(null);
+    setVerifying(true);
+    try {
+      const res = await fetch("/api/team-registration/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ registrationId, code: verificationCode }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRegError(data.error ?? "Errore durante la verifica");
+        return;
+      }
+      // Email verified – join the game
+      emitJoin(teamName);
+    } catch {
+      setRegError("Errore di rete. Riprova.");
+    } finally {
+      setVerifying(false);
+    }
   }
 
   function handleAnswer(chosenIndex: number) {
@@ -156,10 +221,49 @@ export default function PlayPage({ params }: Props) {
       )}
 
       <AnimatePresence mode="wait">
-        {/* JOIN PHASE */}
-        {!joined && (
+        {/* JOIN PHASE – mode selection */}
+        {!joined && joinMode === "select" && (
           <motion.div
-            key="join"
+            key="mode-select"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-center p-6"
+          >
+            <h1 className="text-4xl font-extrabold gradient-text mb-2">Serata Quiz</h1>
+            <p className="text-slate-400 mb-10">Partita: {joinCode}</p>
+            <p className="text-white font-semibold text-lg mb-6 text-center">Come vuoi partecipare?</p>
+
+            <div className="w-full max-w-sm space-y-4">
+              <button
+                onClick={() => setJoinMode("guest")}
+                className="w-full py-4 px-6 rounded-xl bg-slate-800 border border-slate-700 hover:border-purple-500/50 text-white font-semibold text-lg flex items-center gap-4 transition-all"
+              >
+                <span className="text-3xl">🎮</span>
+                <div className="text-left">
+                  <div>Gioca come Guest</div>
+                  <div className="text-sm text-slate-400 font-normal">Entra subito senza registrazione</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setJoinMode("email-register")}
+                className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-purple-600/20 to-pink-500/20 border border-purple-500/50 hover:border-purple-500 text-white font-semibold text-lg flex items-center gap-4 transition-all"
+              >
+                <span className="text-3xl">📧</span>
+                <div className="text-left">
+                  <div>Registra squadra</div>
+                  <div className="text-sm text-slate-400 font-normal">Verifica la tua email e registra il team</div>
+                </div>
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* JOIN PHASE – guest form */}
+        {!joined && joinMode === "guest" && (
+          <motion.div
+            key="join-guest"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -212,6 +316,162 @@ export default function PlayPage({ params }: Props) {
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-xl shadow-lg hover:shadow-pink-500/25 transition-all disabled:opacity-50"
               >
                 {joining ? "Accesso..." : "Unisciti!"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setJoinMode("select")}
+                className="w-full py-2 text-slate-500 hover:text-slate-300 text-sm transition-colors"
+              >
+                ← Torna indietro
+              </button>
+            </form>
+          </motion.div>
+        )}
+
+        {/* JOIN PHASE – email registration form */}
+        {!joined && joinMode === "email-register" && (
+          <motion.div
+            key="join-email"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-center p-6"
+          >
+            <h1 className="text-4xl font-extrabold gradient-text mb-2">Serata Quiz</h1>
+            <p className="text-slate-400 mb-8">Registra la tua squadra</p>
+
+            {regError && (
+              <div className="w-full max-w-sm mb-4 bg-red-500/20 border border-red-500/50 text-red-400 px-4 py-2 rounded-xl text-sm">
+                {regError}
+              </div>
+            )}
+
+            <form onSubmit={handleEmailRegister} className="w-full max-w-sm space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                  Nome della squadra
+                </label>
+                <input
+                  value={teamName}
+                  onChange={(e) => { setTeamName(e.target.value); setRegError(null); }}
+                  required
+                  maxLength={50}
+                  className="w-full px-4 py-4 rounded-xl bg-slate-800 border border-slate-700 text-white text-lg placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  placeholder="Il vostro nome"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                  Indirizzo email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setRegError(null); }}
+                  required
+                  className="w-full px-4 py-4 rounded-xl bg-slate-800 border border-slate-700 text-white text-lg placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  placeholder="email@esempio.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                  Foto squadra (opzionale)
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-all text-left"
+                >
+                  {photoUrl ? "Foto caricata ✓" : "Carica una foto..."}
+                </button>
+                {photoUrl && (
+                  <img src={photoUrl} alt="Preview" className="w-16 h-16 rounded-full object-cover mx-auto mt-3 border-2 border-purple-500" />
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={registering || !teamName.trim() || !email.trim()}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-xl shadow-lg hover:shadow-pink-500/25 transition-all disabled:opacity-50"
+              >
+                {registering ? "Invio codice..." : "Invia codice di verifica"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setJoinMode("select"); setRegError(null); }}
+                className="w-full py-2 text-slate-500 hover:text-slate-300 text-sm transition-colors"
+              >
+                ← Torna indietro
+              </button>
+            </form>
+          </motion.div>
+        )}
+
+        {/* JOIN PHASE – email code verification */}
+        {!joined && joinMode === "email-verify" && (
+          <motion.div
+            key="join-verify"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-center p-6"
+          >
+            <h1 className="text-4xl font-extrabold gradient-text mb-2">Serata Quiz</h1>
+            <p className="text-slate-400 mb-2">Controlla la tua email</p>
+            <p className="text-slate-500 text-sm mb-8 text-center max-w-xs">
+              Abbiamo inviato un codice a <span className="text-slate-300">{email}</span>.
+              Inseriscilo qui sotto.
+            </p>
+
+            {regError && (
+              <div className="w-full max-w-sm mb-4 bg-red-500/20 border border-red-500/50 text-red-400 px-4 py-2 rounded-xl text-sm">
+                {regError}
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyCode} className="w-full max-w-sm space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                  Codice di verifica (6 cifre)
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => { setVerificationCode(e.target.value.replace(/\D/g, "")); setRegError(null); }}
+                  required
+                  className="w-full px-4 py-4 rounded-xl bg-slate-800 border border-slate-700 text-white text-2xl text-center tracking-widest placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  placeholder="000000"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={verifying || verificationCode.length !== 6 || !isConnected}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-xl shadow-lg hover:shadow-pink-500/25 transition-all disabled:opacity-50"
+              >
+                {verifying || joining ? "Verifica..." : "Conferma e unisciti!"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setJoinMode("email-register"); setVerificationCode(""); setRegError(null); }}
+                className="w-full py-2 text-slate-500 hover:text-slate-300 text-sm transition-colors"
+              >
+                ← Non hai ricevuto il codice? Torna indietro per rinviarlo
               </button>
             </form>
           </motion.div>

@@ -1,8 +1,8 @@
 import type { Server as HttpServer, IncomingMessage } from "http";
 import type { Duplex } from "stream";
 import { Server } from "socket.io";
-import { getToken } from "next-auth/jwt";
-import { createGameManager, type GameIO, type GameManager, type Handshake } from "./game-manager";
+import { createGameManager, type GameIO, type GameManager } from "./game-manager";
+import { authenticateFromCookie } from "./auth";
 import { firestoreGameStore } from "./firestore-game-store";
 import type { ClientToServerEvents, ServerToClientEvents, SocketData } from "@/types/socket-events";
 
@@ -10,23 +10,6 @@ let io: GameIO | null = null;
 let manager: GameManager | null = null;
 
 const SOCKET_PATH = "/api/socketio";
-
-/** Reads the NextAuth (v5) JWT from the session cookie sent with the Socket.io handshake. */
-async function authenticateFromCookie(handshake: Handshake): Promise<string | null> {
-  const cookie = handshake.headers.cookie;
-  const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
-  if (!cookie || !secret) return null;
-
-  // The cookie is "__Secure-" prefixed when the site is served over HTTPS (also behind a proxy).
-  for (const secureCookie of [true, false]) {
-    const token = await getToken({ req: { headers: { cookie } }, secret, secureCookie });
-    if (token) {
-      const id = typeof token.id === "string" ? token.id : token.sub;
-      if (id) return id;
-    }
-  }
-  return null;
-}
 
 export function initSocketServer(httpServer: HttpServer) {
   if (io) return io;

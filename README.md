@@ -47,22 +47,25 @@ L'app gira su Cloud Run **nello stesso progetto Google del Firebase**: così acc
 git clone <repo> && cd serata-quiz
 PROJECT_ID=<id-progetto-firebase> REGION=europe-west1 \
 AUTH_SECRET='<segreto attuale, per non disconnettere gli host>' \
-SMTP_PASS='<password smtp>' \
 scripts/setup-cloud-run.sh
 ```
 
 Lo script abilita le API e crea:
 - il repository delle immagini, con pulizia automatica che tiene le ultime 2;
 - un service account con il solo ruolo `roles/datastore.user`;
-- i secret `serata-auth-secret` e `serata-smtp-pass` in Secret Manager.
+- il secret `serata-auth-secret` in Secret Manager.
 
 ### Deploy
 
 ```bash
-PROJECT_ID=<id-progetto-firebase> REGION=europe-west1 \
-SMTP_HOST=smtp.example.com SMTP_USER=quiz@example.com SMTP_FROM='Serata Quiz <quiz@example.com>' \
-scripts/deploy-cloud-run.sh
+PROJECT_ID=<id-progetto-firebase> REGION=europe-west1 scripts/deploy-cloud-run.sh
 ```
+
+### Email (opzionale)
+
+Senza SMTP l'app funziona, ma registrazione e recupero password non possono inviare il codice via email.
+Per attivarle, aggiungi `SMTP_PASS='...'` al setup e `SMTP_HOST`, `SMTP_USER` (più `SMTP_FROM`, `SMTP_PORT`, `SMTP_SECURE` se servono) al deploy.
+Lo script crea il secret `serata-smtp-pass` e imposta le variabili SMTP solo se le passi.
 
 Lo script costruisce l'immagine con Cloud Build (`cloudbuild.yaml`, `Dockerfile`) e la pubblica su Cloud Run.
 Al primo deploy imposta `NEXTAUTH_URL` sull'URL del servizio. Con un dominio personalizzato passa `APP_URL=https://...`.

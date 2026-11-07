@@ -1,11 +1,10 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useSocket } from "@/hooks/use-socket";
 import { useGameState } from "@/hooks/use-game-state";
 import { useCountdown } from "@/hooks/use-countdown";
 import { motion, AnimatePresence } from "framer-motion";
-import type { RankingEntry } from "@/types/game";
 import { getCategoryImage } from "@/lib/category-images";
 
 interface Props {
@@ -15,7 +14,7 @@ interface Props {
 export default function HostPage({ params }: Props) {
   const { joinCode } = use(params);
   const { socket, isConnected } = useSocket();
-  const { gameState, deadline, error, answeredTeams } = useGameState(socket, joinCode);
+  const { gameState, deadline, error, answeredTeams } = useGameState(socket);
   const { seconds } = useCountdown(deadline ?? null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [joinUrl, setJoinUrl] = useState("");
@@ -23,6 +22,8 @@ export default function HostPage({ params }: Props) {
   const [revealedCount, setRevealedCount] = useState(0);
   const [actionPending, setActionPending] = useState(false);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  // Photos travel once with the team list; rankings reference teams by id.
+  const photoById = useMemo(() => new Map(gameState.teams.map(t => [t.id, t.photoUrl])), [gameState.teams]);
 
   // Reset pending state on any phase change (server responded)
   useEffect(() => {
@@ -414,9 +415,9 @@ export default function HostPage({ params }: Props) {
                             title={team.teamName}
                             className="relative"
                           >
-                            {team.photoUrl ? (
+                            {photoById.get(team.teamId) ? (
                               <img
-                                src={team.photoUrl}
+                                src={photoById.get(team.teamId)!}
                                 alt={team.teamName}
                                 className={`w-8 h-8 rounded-full object-cover border-2 ${isCorrect ? "border-emerald-400" : "border-red-400"}`}
                               />
@@ -483,8 +484,8 @@ export default function HostPage({ params }: Props) {
                             : "bg-slate-700/50"
                         }`}
                       >
-                        {entry.photoUrl ? (
-                          <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
+                        {photoById.get(entry.teamId) ? (
+                          <img src={photoById.get(entry.teamId)!} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
                         ) : (
                           <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
                             {entry.teamName.charAt(0).toUpperCase()}
@@ -517,8 +518,8 @@ export default function HostPage({ params }: Props) {
                           className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50"
                         >
                           <span className="text-2xl font-bold text-slate-400 w-8">{i + 1}</span>
-                          {entry.photoUrl ? (
-                            <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
+                          {photoById.get(entry.teamId) ? (
+                            <img src={photoById.get(entry.teamId)!} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
                               {entry.teamName.charAt(0).toUpperCase()}
@@ -534,14 +535,6 @@ export default function HostPage({ params }: Props) {
               </div>
             )}
 
-            {/* Next question button — fixed top-right */}
-            <button
-              onClick={handleNextQuestion}
-              disabled={actionPending}
-              className="fixed top-4 right-4 z-50 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-base shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {gameState.isLastQuestion ? "Classifica finale →" : "Prossima domanda →"}
-            </button>
           </motion.div>
         )}
 
@@ -649,8 +642,8 @@ export default function HostPage({ params }: Props) {
                         }`}>
                           {position}
                         </span>
-                        {entry.photoUrl ? (
-                          <img src={entry.photoUrl} alt={entry.teamName} className="w-14 h-14 rounded-full object-cover border-2 border-purple-500" />
+                        {photoById.get(entry.teamId) ? (
+                          <img src={photoById.get(entry.teamId)!} alt={entry.teamName} className="w-14 h-14 rounded-full object-cover border-2 border-purple-500" />
                         ) : (
                           <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
                             {entry.teamName.charAt(0).toUpperCase()}
@@ -693,6 +686,17 @@ export default function HostPage({ params }: Props) {
           );
         })()}
       </AnimatePresence>
+
+      {/* Next question button — fixed top-right; rendered for every results state (also after a server restart) */}
+      {gameState.phase === "results" && (
+        <button
+          onClick={handleNextQuestion}
+          disabled={actionPending}
+          className="fixed top-4 right-4 z-50 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-base shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:pointer-events-none"
+        >
+          {gameState.isLastQuestion ? "Classifica finale →" : "Prossima domanda →"}
+        </button>
+      )}
     </div>
   );
 }

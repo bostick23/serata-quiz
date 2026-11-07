@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import type { Socket } from "socket.io-client";
-import type { GameState } from "@/types/game";
-import { toLocalDeadline } from "./use-socket";
+import { useEffect, useState } from "react";
+import type { GameState, TeamInfo } from "@/types/game";
+import type { ServerToClientEvents } from "@/types/socket-events";
+import { toLocalDeadline, type TypedSocket } from "./use-socket";
+import { getCategoryImage } from "@/lib/category-images";
 
 const initialState: GameState = {
   joinCode: "",
@@ -14,7 +15,14 @@ const initialState: GameState = {
   teams: [],
 };
 
-export function useGameState(socket: Socket | null, joinCode: string) {
+/** Warms the browser cache so the next category animation is ready when its 5-second phase starts. */
+function preloadCategoryImage(category: string | null | undefined) {
+  if (!category || typeof window === "undefined") return;
+  const img = new Image();
+  img.src = getCategoryImage(category);
+}
+
+export function useGameState(socket: TypedSocket | null) {
   const [gameState, setGameState] = useState<GameState>(initialState);
   const [deadline, setDeadline] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,86 +32,86 @@ export function useGameState(socket: Socket | null, joinCode: string) {
   useEffect(() => {
     if (!socket) return;
 
-    socket.on("game:state", (state: GameState) => {
-      setGameState(state);
-      setError(null);
-    });
+    const handlers: { [E in keyof ServerToClientEvents]?: ServerToClientEvents[E] } = {
+      "game:state": state => {
+        setGameState(state);
+        setDeadline(state.deadline ? toLocalDeadline(state.deadline) : null);
+        setAnsweredTeams(new Set(state.answeredTeamIds ?? []));
+        setRankingsRevealed(state.rankingsRevealed ?? false);
+        setError(null);
+      },
+      "team:joined": ({ team }) => {
+        setGameState(prev => ({ ...prev, teams: upsertTeam(prev.teams, team) }));
+      },
+      "team:left": ({ teamId }) => {
+        setGameState(prev => ({
+          ...prev,
+          teams: prev.teams.map(t => (t.id === teamId ? { ...t, connected: false } : t)),
+        }));
+      },
+      "question:category": ({ category, questionNumber, deadline: d }) => {
+        setGameState(prev => ({
+          ...prev,
+          phase: "category",
+          currentQuestion: questionNumber,
+          correctIndex: undefined,
+          rankings: undefined,
+          isLastQuestion: undefined,
+          categoryName: category,
+        }));
+        setDeadline(toLocalDeadline(d));
+        setAnsweredTeams(new Set());
+      },
+      "question:show": ({ question, deadline: d }) => {
+        setGameState(prev => ({ ...prev, phase: "read", question, correctIndex: undefined, rankings: undefined, isLastQuestion: undefined }));
+        setDeadline(toLocalDeadline(d));
+        setAnsweredTeams(new Set());
+      },
+      "question:answer-phase": ({ deadline: d }) => {
+        setGameState(prev => ({ ...prev, phase: "answer" }));
+        setDeadline(toLocalDeadline(d));
+      },
+      "answer:received": ({ teamId }) => {
+        setAnsweredTeams(prev => new Set(prev).add(teamId));
+      },
+      "question:results": ({ rankings, correctIndex, isLastQuestion, nextCategory }) => {
+        setGameState(prev => ({ ...prev, phase: "results", rankings, correctIndex, isLastQuestion }));
+        setDeadline(null);
+        preloadCategoryImage(nextCategory);
+      },
+      "game:finished": ({ rankings }) => {
+        setGameState(prev => ({ ...prev, phase: "finished", rankings }));
+        setDeadline(null);
+        setRankingsRevealed(false);
+      },
+      "rankings:revealed": () => {
+        setRankingsRevealed(true);
+      },
+      "game:cancelled": ({ message }) => {
+        setGameState(prev => ({ ...prev, phase: "cancelled" }));
+        setDeadline(null);
+        setError(message);
+      },
+      error: ({ message }) => {
+        setError(message);
+      },
+    };
 
-    socket.on("team:joined", ({ team, teamCount }) => {
-      setGameState(prev => ({
-        ...prev,
-        teams: [...prev.teams.filter(t => t.id !== team.id), team],
-      }));
-    });
-
-    socket.on("team:left", ({ teamId }) => {
-      setGameState(prev => ({
-        ...prev,
-        teams: prev.teams.map(t => t.id === teamId ? { ...t, connected: false } : t),
-      }));
-    });
-
-    socket.on("question:category", ({ category, questionNumber, totalQuestions, deadline: d }) => {
-      setGameState(prev => ({ ...prev, phase: "category", currentQuestion: questionNumber, correctIndex: undefined, rankings: undefined, isLastQuestion: undefined, categoryName: category }));
-      setDeadline(toLocalDeadline(d));
-      setAnsweredTeams(new Set());
-    });
-
-    socket.on("question:show", ({ question, phase, deadline: d }) => {
-      setGameState(prev => ({ ...prev, phase: "read", question, correctIndex: undefined, rankings: undefined, isLastQuestion: undefined }));
-      setDeadline(toLocalDeadline(d));
-      setAnsweredTeams(new Set());
-    });
-
-    socket.on("question:answer-phase", ({ deadline: d }) => {
-      setGameState(prev => ({ ...prev, phase: "answer" }));
-      setDeadline(toLocalDeadline(d));
-    });
-
-    socket.on("answer:received", ({ teamId }) => {
-      setAnsweredTeams(prev => new Set(prev).add(teamId));
-    });
-
-    socket.on("question:results", ({ rankings, correctIndex, isLastQuestion }) => {
-      setGameState(prev => ({ ...prev, phase: "results", rankings, correctIndex, isLastQuestion }));
-      setDeadline(null);
-    });
-
-    socket.on("game:finished", ({ rankings }) => {
-      setGameState(prev => ({ ...prev, phase: "finished", rankings }));
-      setDeadline(null);
-      setRankingsRevealed(false);
-    });
-
-    socket.on("rankings:revealed", () => {
-      setRankingsRevealed(true);
-    });
-
-    socket.on("game:cancelled", ({ message }) => {
-      setGameState(prev => ({ ...prev, phase: "cancelled" }));
-      setDeadline(null);
-      setError(message);
-    });
-
-    socket.on("error", ({ message }) => {
-      setError(message);
-    });
-
+    const entries = Object.entries(handlers) as Array<[keyof ServerToClientEvents, (...args: never[]) => void]>;
+    for (const [event, handler] of entries) socket.on(event, handler as never);
+    // Remove only our own listeners: other components may listen to the same events.
     return () => {
-      socket.off("game:state");
-      socket.off("team:joined");
-      socket.off("team:left");
-      socket.off("question:category");
-      socket.off("question:show");
-      socket.off("question:answer-phase");
-      socket.off("answer:received");
-      socket.off("question:results");
-      socket.off("game:finished");
-      socket.off("rankings:revealed");
-      socket.off("game:cancelled");
-      socket.off("error");
+      for (const [event, handler] of entries) socket.off(event, handler as never);
     };
   }, [socket]);
 
   return { gameState, deadline, error, answeredTeams, rankingsRevealed, setError };
+}
+
+function upsertTeam(teams: TeamInfo[], team: TeamInfo): TeamInfo[] {
+  const index = teams.findIndex(t => t.id === team.id);
+  if (index === -1) return [...teams, team];
+  const copy = [...teams];
+  copy[index] = team;
+  return copy;
 }

@@ -217,6 +217,13 @@ export function computeFinalRankings(game: GameRuntime): RankingEntry[] {
   );
 }
 
+export function finishGame(game: GameRuntime): RankingEntry[] {
+  game.phase = "finished";
+  game.deadline = null;
+  game.lastRankings = computeFinalRankings(game);
+  return game.lastRankings;
+}
+
 /** Rebuilds running totals (and the current question's answers) from persisted answers. */
 export function restoreScores(
   game: GameRuntime,
@@ -236,6 +243,8 @@ export function restoreScores(
   if (game.phase === "results") {
     const question = getCurrentQuestion(game);
     if (question) game.lastRankings = computeQuestionRankings(game, question.correctIndex);
+  } else if (game.phase === "finished") {
+    game.lastRankings = computeFinalRankings(game);
   }
 }
 
@@ -259,6 +268,7 @@ export function toPublicState(game: GameRuntime, joinCode: string, language: str
   const inQuestion = game.phase === "category" || game.phase === "read" || game.phase === "answer" || game.phase === "results";
   const question = inQuestion ? getCurrentQuestion(game) : null;
   const showResults = game.phase === "results" && question !== null;
+  const finished = game.phase === "finished";
 
   return {
     joinCode,
@@ -271,7 +281,7 @@ export function toPublicState(game: GameRuntime, joinCode: string, language: str
     categoryName: question?.category,
     deadline: game.deadline ?? undefined,
     correctIndex: showResults ? question.correctIndex : undefined,
-    rankings: showResults ? game.lastRankings ?? undefined : undefined,
+    rankings: showResults || finished ? game.lastRankings ?? undefined : undefined,
     isLastQuestion: showResults ? isLastQuestion(game) : undefined,
     answeredTeamIds: game.phase === "answer" ? Array.from(game.currentAnswers.keys()) : undefined,
   };

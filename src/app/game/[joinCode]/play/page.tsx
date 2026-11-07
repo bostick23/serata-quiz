@@ -1,83 +1,129 @@
 "use client";
 
-import { use, useEffect, useState, useRef } from "react";
+import { use, useEffect, useState, useRef, useSyncExternalStore } from "react";
 import { useSocket } from "@/hooks/use-socket";
 import { useGameState } from "@/hooks/use-game-state";
 import { useCountdown } from "@/hooks/use-countdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { getCategoryImage } from "@/lib/category-images";
 import { AdBanner } from "@/components/ad-banner";
+import { clearTeamSession, loadTeamSession, saveTeamSession } from "@/lib/team-session";
+import type { JoinAck } from "@/types/socket-events";
 
 interface Props {
   params: Promise<{ joinCode: string }>;
 }
 
+const noopSubscribe = () => () => {};
+
 export default function PlayPage({ params }: Props) {
   const { joinCode } = use(params);
   const { socket, isConnected } = useSocket();
-  const { gameState, deadline, error, rankingsRevealed, setError } = useGameState(socket, joinCode);
+  const { gameState, deadline, error, rankingsRevealed, setError } = useGameState(socket);
   const { seconds } = useCountdown(deadline ?? null);
 
   const [teamName, setTeamName] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [answer, setAnswer] = useState<{ gameQuestionId: string; index: number } | null>(null);
   const [myTeamId, setMyTeamId] = useState<string | null>(null);
+  const [, forceRender] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Listen for team:joined to confirm our own join and get our teamId
-  useEffect(() => {
-    if (!socket) return;
+  // Read on every render (cheap); the server snapshot keeps hydration consistent.
+  const hasStoredSession = useSyncExternalStore(noopSubscribe, () => loadTeamSession(joinCode) !== null, () => false);
 
-    const handler = ({ team }: { team: { id: string; name: string } }) => {
-      if (team.name === teamName) {
-        console.log("[Play] Team joined confirmed:", team.name, team.id);
-        setMyTeamId(team.id);
-        setJoined(true);
-        setJoining(false);
-      }
-    };
+  // The chosen answer belongs to one question: a new question resets it without an effect.
+  const selectedAnswer = answer && answer.gameQuestionId === gameState.question?.gameQuestionId ? answer.index : null;
 
-    const joinErrorHandler = () => {
-      // Error message display is handled by useGameState's error listener;
-      // here we only reset the pending join state so the user can retry.
-      setJoining(false);
-    };
-
-    socket.on("team:joined", handler);
-    socket.on("error", joinErrorHandler);
-    return () => {
-      socket.off("team:joined", handler);
-      socket.off("error", joinErrorHandler);
-    };
-  }, [socket, teamName]);
-
-  // Reset selected answer when a new question arrives
-  useEffect(() => {
-    if (gameState.phase === "read" || gameState.phase === "answer") {
-      setSelectedAnswer(null);
+  function applyJoinAck(res: JoinAck, fallbackName: string) {
+    if (res.ok) {
+      saveTeamSession(joinCode, { teamId: res.teamId, teamName: res.teamName, rejoinToken: res.rejoinToken });
+      setMyTeamId(res.teamId);
+      setTeamName(res.teamName);
+      setJoined(true);
+      setError(null);
+      return;
     }
-  }, [gameState.question?.gameQuestionId]);
-
-  function handleJoin(e: React.FormEvent) {
-    e.preventDefault();
-    if (!socket || !isConnected || !teamName.trim()) return;
-    console.log("[Play] Emitting game:join", { joinCode, teamName: teamName.trim(), connected: socket.connected });
-    setJoining(true);
-    socket.emit("game:join", { joinCode, teamName: teamName.trim(), photoUrl: photoUrl ?? undefined });
-    // Unblock button after 10s if server never responds
-    setTimeout(() => setJoining(false), 10000);
+    if (res.code !== "server-error") clearTeamSession(joinCode);
+    setJoined(false);
+    setTeamName(fallbackName);
+    setError(res.error);
+    forceRender(n => n + 1);
   }
 
-  function handleAnswer(chosenIndex: number) {
+  // (Re)join automatically on every (re)connection with the stored rejoin token:
+  // covers page refreshes and reconnections the server could not recover by itself.
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+    if (socket.recovered && joined) return; // Socket.io restored room membership and missed events
+    const session = loadTeamSession(joinCode);
+    if (!session) return;
+
+    let cancelled = false;
+    socket
+      .timeout(10_000)
+      .emitWithAck("game:join", { joinCode, teamName: session.teamName, rejoinToken: session.rejoinToken })
+      .then(res => {
+        if (!cancelled) applyJoinAck(res, session.teamName);
+      })
+      .catch(() => {
+        // No answer in time: the next reconnection retries.
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only on connection changes
+  }, [socket, isConnected, joinCode]);
+
+  // A cancelled game cannot be rejoined: forget the stored team.
+  useEffect(() => {
+    if (gameState.phase === "cancelled") clearTeamSession(joinCode);
+  }, [gameState.phase, joinCode]);
+
+  // Errors are transient notices: hide them after a few seconds.
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), 6_000);
+    return () => clearTimeout(timer);
+  }, [error, setError]);
+
+  async function handleJoin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!socket || !isConnected || !teamName.trim() || joining) return;
+    setJoining(true);
+    try {
+      const res = await socket.timeout(10_000).emitWithAck("game:join", { joinCode, teamName, photoUrl });
+      applyJoinAck(res, teamName);
+    } catch {
+      setError("Il server non risponde, riprova.");
+    } finally {
+      setJoining(false);
+    }
+  }
+
+  function handleJoinAsNewTeam() {
+    clearTeamSession(joinCode);
+    forceRender(n => n + 1);
+  }
+
+  async function handleAnswer(chosenIndex: number) {
     if (!socket || !gameState.question || selectedAnswer !== null) return;
-    setSelectedAnswer(chosenIndex);
-    socket.emit("answer:submit", {
-      joinCode,
-      gameQuestionId: gameState.question.gameQuestionId,
-      chosenIndex,
-    });
+    const gameQuestionId = gameState.question.gameQuestionId;
+    setAnswer({ gameQuestionId, index: chosenIndex });
+    try {
+      const res = await socket.timeout(5_000).emitWithAck("answer:submit", { joinCode, gameQuestionId, chosenIndex });
+      if (res.ok) return;
+      if (res.reason === "not-joined") {
+        setAnswer(null);
+        setError("Connessione persa: riprova a rispondere.");
+      } else if (res.reason === "wrong-phase" || res.reason === "stale-question") {
+        setError("Tempo scaduto: risposta non registrata.");
+      }
+    } catch {
+      setError("Connessione instabile: risposta non confermata.");
+    }
   }
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -168,6 +214,16 @@ export default function PlayPage({ params }: Props) {
             <h1 className="text-4xl font-extrabold gradient-text mb-2">Serata Quiz</h1>
             <p className="text-slate-400 mb-8">Partita: {joinCode}</p>
 
+            {hasStoredSession && (
+              <div className="w-full max-w-sm mb-6 bg-slate-800 border border-slate-700 rounded-xl p-4 text-center">
+                <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <p className="text-slate-300 text-sm">Riconnessione alla tua squadra…</p>
+                <button type="button" onClick={handleJoinAsNewTeam} className="mt-2 text-xs text-slate-400 underline hover:text-white">
+                  Entra con un&apos;altra squadra
+                </button>
+              </div>
+            )}
+
             <form onSubmit={handleJoin} className="w-full max-w-sm space-y-5">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">
@@ -208,7 +264,7 @@ export default function PlayPage({ params }: Props) {
 
               <button
                 type="submit"
-                disabled={joining || !teamName.trim() || !isConnected}
+                disabled={joining || hasStoredSession || !teamName.trim() || !isConnected}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-xl shadow-lg hover:shadow-pink-500/25 transition-all disabled:opacity-50"
               >
                 {joining ? "Accesso..." : "Unisciti!"}
@@ -250,7 +306,7 @@ export default function PlayPage({ params }: Props) {
               </div>
             </div>
 
-            <AdBanner key="ad-lobby" className="mt-6 max-w-sm" />
+            <AdBanner className="mt-6 max-w-sm" />
           </motion.div>
         )}
 
@@ -358,7 +414,6 @@ export default function PlayPage({ params }: Props) {
                   <p className="text-lg font-semibold">Risposta inviata!</p>
                   <p className="text-slate-400 text-sm mt-1">In attesa degli altri...</p>
                 </motion.div>
-                <AdBanner key={`ad-answer-${gameState.question?.gameQuestionId}`} className="mt-4" />
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3 flex-1">
@@ -424,7 +479,7 @@ export default function PlayPage({ params }: Props) {
               <p className="text-slate-400">In attesa dei risultati...</p>
             )}
 
-            <AdBanner key={`ad-results-${gameState.currentQuestion}`} className="mt-6 max-w-sm" />
+            <AdBanner className="mt-6 max-w-sm" />
           </motion.div>
         )}
 

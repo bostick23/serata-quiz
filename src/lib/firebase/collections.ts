@@ -42,12 +42,22 @@ export interface GameDoc {
   numQuestions: number;
   currentQuestionIndex: number;
   createdAt: Timestamp;
+  /** Question ids used by the game (lets "avoid repeats" run without N+1 queries). Absent on older games. */
+  questionIds?: string[];
 }
 
 export interface GameQuestionDoc {
   questionId: string;
   position: number;
   startedAt: Timestamp | null;
+  /**
+   * Snapshot of the question taken when the game is created, so a game never
+   * depends on later edits/deletions of the question bank. Absent on older games.
+   */
+  category?: string | null;
+  text?: string;
+  choices?: string[];
+  correctIndex?: number;
 }
 
 export interface TeamDoc {
@@ -55,6 +65,8 @@ export interface TeamDoc {
   photoUrl: string | null;
   socketId: string | null;
   createdAt: Timestamp;
+  /** Secret that lets a player reclaim the team after a reconnect/refresh. Absent on older teams. */
+  rejoinToken?: string;
 }
 
 export interface AnswerDoc {

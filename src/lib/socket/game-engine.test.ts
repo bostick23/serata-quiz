@@ -11,6 +11,7 @@ import {
   allTeamsAnswered,
   endAnswerPhase,
   computeFinalRankings,
+  finishGame,
   restoreScores,
   toPublicState,
   type EngineQuestion,
@@ -241,6 +242,28 @@ describe("computeFinalRankings", () => {
     game.scores.set("t2", 300);
 
     expect(computeFinalRankings(game).map(r => r.teamId)).toEqual(["t2", "t1"]);
+  });
+});
+
+describe("finishGame", () => {
+  it("moves to finished and returns the final rankings", () => {
+    const game = runtimeWithTeams(["A", "B"]);
+    game.scores.set("t2", 50);
+
+    const rankings = finishGame(game);
+
+    expect(game.phase).toBe("finished");
+    expect(rankings.map(r => r.teamId)).toEqual(["t2", "t1"]);
+  });
+
+  it("exposes the final rankings to clients that reconnect afterwards", () => {
+    const game = runtimeWithTeams(["A"]);
+    finishGame(game);
+
+    const state = toPublicState(game, "ABC123", "it");
+
+    expect(state.phase).toBe("finished");
+    expect(state.rankings?.map(r => r.teamId)).toEqual(["t1"]);
   });
 });
 

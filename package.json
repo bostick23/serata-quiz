@@ -8,7 +8,8 @@
     "start": "NODE_ENV=production tsx server.ts",
     "lint": "eslint",
     "db:seed": "tsx src/lib/db/seed.ts",
-    "db:seed-en": "tsx src/lib/db/seed-en.ts"
+    "db:seed-en": "tsx src/lib/db/seed-en.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -23,7 +24,6 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "tsx": "^4.21.0",
@@ -40,6 +40,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

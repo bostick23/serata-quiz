@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import type { ServerToClientEvents, ClientToServerEvents } from "@/types/socket-events";
 
-type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
+export type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 let globalSocket: TypedSocket | null = null;
 
@@ -14,12 +14,15 @@ let globalSocket: TypedSocket | null = null;
  * Shared across all hook consumers.
  */
 let serverOffset = 0;
+const offsetSamples: number[] = [];
 
 function getSocket(): TypedSocket {
   if (!globalSocket) {
     globalSocket = io({
       path: "/api/socketio",
-      transports: ["websocket"],
+      // WebSocket first; fall back to long-polling on networks that block WebSockets.
+      transports: ["websocket", "polling"],
+      tryAllTransports: true,
     });
   }
   return globalSocket;
@@ -30,78 +33,55 @@ export function toLocalDeadline(serverDeadline: number): number {
   return serverDeadline - serverOffset;
 }
 
-export function useSocket() {
-  const [socket, setSocket] = useState<TypedSocket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const syncInterval = useRef<ReturnType<typeof setInterval> | null>(null);
-  const samplesRef = useRef<number[]>([]);
+function onTimeSync({ clientTime, serverTime }: { clientTime: number; serverTime: number }) {
+  const rtt = Date.now() - clientTime;
+  // The server answered roughly rtt/2 after the ping left: offset = serverTime - (clientTime + rtt/2)
+  offsetSamples.push(serverTime - (clientTime + rtt / 2));
+  // Keep last 5 samples, use median for stability
+  if (offsetSamples.length > 5) offsetSamples.shift();
+  const sorted = [...offsetSamples].sort((a, b) => a - b);
+  serverOffset = sorted[Math.floor(sorted.length / 2)];
+}
 
-  const doSync = useCallback((s: TypedSocket) => {
-    (s as Socket).emit("time:sync", { clientTime: Date.now() });
-  }, []);
+export function useSocket() {
+  const [socket] = useState<TypedSocket | null>(() => (typeof window === "undefined" ? null : getSocket()));
+  const [isConnected, setIsConnected] = useState(() => socket?.connected ?? false);
 
   useEffect(() => {
-    const s = getSocket();
-    setSocket(s);
+    if (!socket) return;
+    const timers: Array<ReturnType<typeof setTimeout> | ReturnType<typeof setInterval>> = [];
+    const sync = () => socket.emit("time:sync", { clientTime: Date.now() });
 
+    function startSync() {
+      // 3 quick pings, then one every 30s
+      sync();
+      timers.push(setTimeout(sync, 500), setTimeout(sync, 1000), setInterval(sync, 30_000));
+    }
+    function stopSync() {
+      for (const t of timers.splice(0)) clearTimeout(t);
+    }
     function onConnect() {
       setIsConnected(true);
-      // Start time sync: send 3 pings quickly, then once every 30s
-      samplesRef.current = [];
-      doSync(s);
-      let quickCount = 0;
-      const quickInterval = setInterval(() => {
-        quickCount++;
-        doSync(s);
-        if (quickCount >= 2) clearInterval(quickInterval);
-      }, 500);
-
-      syncInterval.current = setInterval(() => doSync(s), 30_000);
+      stopSync();
+      startSync();
     }
-
     function onDisconnect() {
       setIsConnected(false);
-      if (syncInterval.current) {
-        clearInterval(syncInterval.current);
-        syncInterval.current = null;
-      }
+      stopSync();
     }
 
-    // Listen for sync responses
-    (s as Socket).on("time:sync", ({ clientTime, serverTime }: { clientTime: number; serverTime: number }) => {
-      const now = Date.now();
-      const rtt = now - clientTime;
-      // Estimate: server's clock at the time it processed = serverTime
-      // The message took roughly rtt/2 to go and rtt/2 to come back
-      // So at clientTime + rtt/2, the server said serverTime
-      // offset = serverTime - (clientTime + rtt/2)
-      const offset = serverTime - (clientTime + rtt / 2);
-      samplesRef.current.push(offset);
-      // Keep last 5 samples, use median for stability
-      if (samplesRef.current.length > 5) samplesRef.current.shift();
-      const sorted = [...samplesRef.current].sort((a, b) => a - b);
-      serverOffset = sorted[Math.floor(sorted.length / 2)];
-    });
-
-    s.on("connect", onConnect);
-    s.on("disconnect", onDisconnect);
-
-    // If already connected (e.g. hot reload)
-    if (s.connected) {
-      setIsConnected(true);
-      doSync(s);
-    }
+    socket.on("time:sync", onTimeSync);
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    if (socket.connected) onConnect();
 
     return () => {
-      s.off("connect", onConnect);
-      s.off("disconnect", onDisconnect);
-      (s as Socket).off("time:sync");
-      if (syncInterval.current) {
-        clearInterval(syncInterval.current);
-        syncInterval.current = null;
-      }
+      socket.off("time:sync", onTimeSync);
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      stopSync();
     };
-  }, [doSync]);
+  }, [socket]);
 
   return { socket, isConnected };
 }

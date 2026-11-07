@@ -1,0 +1,12 @@
+# Files not uploaded to Cloud Build by `gcloud builds submit`.
+# Without this file gcloud would derive the list from .gitignore.
+.git
+.gitignore
+node_modules
+.next
+.env*
+.superpowers
+*.tsbuildinfo
+next-env.d.ts
+coverage
+public/uploads

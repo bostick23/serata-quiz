@@ -20,16 +20,19 @@ export async function GET() {
     if (!session?.user?.id)
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
 
-    // Two queries: public (ownerId null) + user's own
+    // "Le mie domande": hosts only see (and can only edit) their own questions.
+    // Admins also manage the public bank, so they keep getting it.
+    const isAdmin = (session.user as { role?: string }).role === "admin";
     const [publicSnap, userSnap] = await Promise.all([
-      questionsCol().where("ownerId", "==", null).get(),
+      isAdmin ? questionsCol().where("ownerId", "==", null).get() : Promise.resolve(null),
       questionsCol().where("ownerId", "==", session.user.id).get(),
     ]);
 
-    const allQuestions = [
-      ...publicSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.() ?? new Date() })),
-      ...userSnap.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.() ?? new Date() })),
-    ];
+    const allQuestions = [...(publicSnap?.docs ?? []), ...userSnap.docs].map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
+    }));
 
     allQuestions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

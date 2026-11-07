@@ -1,12 +1,12 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import { useSocket } from "@/hooks/use-socket";
 import { useGameState } from "@/hooks/use-game-state";
 import { useCountdown } from "@/hooks/use-countdown";
 import { motion, AnimatePresence } from "framer-motion";
-import type { RankingEntry } from "@/types/game";
 import { getCategoryImage } from "@/lib/category-images";
+import { MAX_JOIN_ATTEMPTS, retryDelayMs } from "@/lib/retry";
 
 interface Props {
   params: Promise<{ joinCode: string }>;
@@ -15,14 +15,17 @@ interface Props {
 export default function HostPage({ params }: Props) {
   const { joinCode } = use(params);
   const { socket, isConnected } = useSocket();
-  const { gameState, deadline, error, answeredTeams } = useGameState(socket, joinCode);
+  const { gameState, deadline, error, answeredTeams } = useGameState(socket);
   const { seconds } = useCountdown(deadline ?? null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [joinUrl, setJoinUrl] = useState("");
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [revealedCount, setRevealedCount] = useState(0);
   const [actionPending, setActionPending] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  // Photos travel once with the team list; rankings reference teams by id.
+  const photoById = useMemo(() => new Map(gameState.teams.map(t => [t.id, t.photoUrl])), [gameState.teams]);
 
   // Reset pending state on any phase change (server responded)
   useEffect(() => {
@@ -97,10 +100,39 @@ export default function HostPage({ params }: Props) {
     setJoinUrl(`${window.location.origin}/game/${joinCode}/play`);
   }, [joinCode]);
 
+  // Join as host on every (re)connection; transient server errors and timeouts are retried with backoff.
   useEffect(() => {
-    if (socket && isConnected) {
-      socket.emit("game:host-join", { joinCode });
-    }
+    if (!socket || !isConnected) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const attempt = async (n: number) => {
+      try {
+        const res = await socket.timeout(10_000).emitWithAck("game:host-join", { joinCode });
+        if (cancelled) return;
+        if (res.ok) {
+          setLocalError(null);
+          return;
+        }
+        if (res.code !== "server-error") {
+          setLocalError(res.error);
+          return;
+        }
+      } catch {
+        if (cancelled) return;
+      }
+      if (n + 1 >= MAX_JOIN_ATTEMPTS) {
+        setLocalError("Impossibile collegarsi alla partita: ricarica la pagina.");
+        return;
+      }
+      timer = setTimeout(() => void attempt(n + 1), retryDelayMs(n));
+    };
+    void attempt(0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [socket, isConnected, joinCode]);
 
   useEffect(() => {
@@ -112,16 +144,34 @@ export default function HostPage({ params }: Props) {
     }
   }, [gameState.phase, joinCode]);
 
-  function handleStart() {
-    if (actionPending) return;
+  /** Sends a host command; on refusal (or no answer) the button is re-enabled and the reason shown. */
+  async function sendCommand(event: "game:start" | "question:next") {
+    if (!socket || actionPending) return;
     setActionPending(true);
-    socket?.emit("game:start", { joinCode });
+    try {
+      const res =
+        event === "game:start"
+          ? await socket.timeout(8_000).emitWithAck("game:start", { joinCode })
+          : await socket.timeout(8_000).emitWithAck("question:next", { joinCode });
+      // On success the phase change re-enables the button.
+      if (!res.ok) showCommandError(res.error);
+    } catch {
+      showCommandError("Il server non risponde, riprova.");
+    }
+  }
+
+  function showCommandError(message: string) {
+    setActionPending(false);
+    setLocalError(message);
+    setTimeout(() => setLocalError(prev => (prev === message ? null : prev)), 6_000);
+  }
+
+  function handleStart() {
+    void sendCommand("game:start");
   }
 
   function handleNextQuestion() {
-    if (actionPending) return;
-    setActionPending(true);
-    socket?.emit("question:next", { joinCode });
+    void sendCommand("question:next");
   }
 
   function handleCancel() {
@@ -182,9 +232,9 @@ export default function HostPage({ params }: Props) {
         </div>
       )}
 
-      {error && (
+      {(localError ?? error) && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500/20 border border-red-500/50 text-red-400 px-6 py-3 rounded-xl">
-          {error}
+          {localError ?? error}
         </div>
       )}
 
@@ -414,9 +464,9 @@ export default function HostPage({ params }: Props) {
                             title={team.teamName}
                             className="relative"
                           >
-                            {team.photoUrl ? (
+                            {photoById.get(team.teamId) ? (
                               <img
-                                src={team.photoUrl}
+                                src={photoById.get(team.teamId)!}
                                 alt={team.teamName}
                                 className={`w-8 h-8 rounded-full object-cover border-2 ${isCorrect ? "border-emerald-400" : "border-red-400"}`}
                               />
@@ -483,8 +533,8 @@ export default function HostPage({ params }: Props) {
                             : "bg-slate-700/50"
                         }`}
                       >
-                        {entry.photoUrl ? (
-                          <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
+                        {photoById.get(entry.teamId) ? (
+                          <img src={photoById.get(entry.teamId)!} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
                         ) : (
                           <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
                             {entry.teamName.charAt(0).toUpperCase()}
@@ -517,8 +567,8 @@ export default function HostPage({ params }: Props) {
                           className="flex items-center gap-3 p-3 rounded-xl bg-slate-700/50"
                         >
                           <span className="text-2xl font-bold text-slate-400 w-8">{i + 1}</span>
-                          {entry.photoUrl ? (
-                            <img src={entry.photoUrl} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
+                          {photoById.get(entry.teamId) ? (
+                            <img src={photoById.get(entry.teamId)!} alt={entry.teamName} className="w-8 h-8 rounded-full object-cover" />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center text-sm font-bold">
                               {entry.teamName.charAt(0).toUpperCase()}
@@ -534,14 +584,6 @@ export default function HostPage({ params }: Props) {
               </div>
             )}
 
-            {/* Next question button — fixed top-right */}
-            <button
-              onClick={handleNextQuestion}
-              disabled={actionPending}
-              className="fixed top-4 right-4 z-50 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-base shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:pointer-events-none"
-            >
-              {gameState.isLastQuestion ? "Classifica finale →" : "Prossima domanda →"}
-            </button>
           </motion.div>
         )}
 
@@ -649,8 +691,8 @@ export default function HostPage({ params }: Props) {
                         }`}>
                           {position}
                         </span>
-                        {entry.photoUrl ? (
-                          <img src={entry.photoUrl} alt={entry.teamName} className="w-14 h-14 rounded-full object-cover border-2 border-purple-500" />
+                        {photoById.get(entry.teamId) ? (
+                          <img src={photoById.get(entry.teamId)!} alt={entry.teamName} className="w-14 h-14 rounded-full object-cover border-2 border-purple-500" />
                         ) : (
                           <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
                             {entry.teamName.charAt(0).toUpperCase()}
@@ -693,6 +735,17 @@ export default function HostPage({ params }: Props) {
           );
         })()}
       </AnimatePresence>
+
+      {/* Next question button — fixed top-right; rendered for every results state (also after a server restart) */}
+      {gameState.phase === "results" && (
+        <button
+          onClick={handleNextQuestion}
+          disabled={actionPending}
+          className="fixed top-4 right-4 z-50 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-base shadow-lg hover:shadow-pink-500/25 hover:scale-[1.02] transition-all disabled:opacity-50 disabled:pointer-events-none"
+        >
+          {gameState.isLastQuestion ? "Classifica finale →" : "Prossima domanda →"}
+        </button>
+      )}
     </div>
   );
 }

@@ -1,0 +1,23 @@
+# Builds the container image and pushes it to Artifact Registry.
+# Invoked by scripts/deploy-cloud-run.sh; _IMAGE is the full Artifact Registry tag.
+substitutions:
+  _IMAGE: ""
+  _ADSENSE_CLIENT_ID: ""
+  _ADSENSE_SLOT_ID: ""
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --tag=${_IMAGE}
+      - --build-arg=NEXT_PUBLIC_ADSENSE_CLIENT_ID=${_ADSENSE_CLIENT_ID}
+      - --build-arg=NEXT_PUBLIC_ADSENSE_SLOT_ID=${_ADSENSE_SLOT_ID}
+      - .
+
+images:
+  - ${_IMAGE}
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1200s

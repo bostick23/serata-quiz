@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { questionsCol } from "@/lib/firebase/collections";
 import { auth } from "@/lib/auth/config";
+import { invalidatePublicQuestions } from "@/lib/questions/public-questions";
 
 const updateQuestionSchema = z.object({
   text: z.string().min(1).optional(),
@@ -52,20 +53,23 @@ export async function PUT(
     }
 
     const data = parsed.data;
+    const { question } = result;
 
-    if (data.correctIndex !== undefined && data.choices) {
-      if (data.correctIndex >= data.choices.length) {
-        return NextResponse.json(
-          { error: "L'indice della risposta corretta non è valido" },
-          { status: 400 }
-        );
-      }
+    // Validate against the merged result: changing only the choices (or only the index)
+    // must not leave a question whose correct answer does not exist.
+    const choices = data.choices ?? question.choices;
+    const correctIndex = data.correctIndex ?? question.correctIndex;
+    if (correctIndex >= choices.length) {
+      return NextResponse.json(
+        { error: "L'indice della risposta corretta non è valido" },
+        { status: 400 }
+      );
     }
 
     await questionsCol().doc(id).update(data);
-    const updated = await questionsCol().doc(id).get();
+    if (question.ownerId === null) invalidatePublicQuestions();
 
-    return NextResponse.json({ id, ...updated.data() });
+    return NextResponse.json({ ...question, ...data, id });
   } catch (error) {
     console.error("Update question error:", error);
     return NextResponse.json(
@@ -93,6 +97,7 @@ export async function DELETE(
     }
 
     await questionsCol().doc(id).delete();
+    if (result.question.ownerId === null) invalidatePublicQuestions();
 
     return NextResponse.json({ success: true });
   } catch (error) {

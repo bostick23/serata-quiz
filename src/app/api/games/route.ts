@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/firebase";
-import { questionsCol, gamesCol, gameQuestionsCol, uniqueJoinCodesCol } from "@/lib/firebase/collections";
+import { gamesCol, gameQuestionsCol, uniqueJoinCodesCol } from "@/lib/firebase/collections";
 import { auth } from "@/lib/auth/config";
 import { generateJoinCode } from "@/lib/utils/join-code";
 import { Timestamp } from "firebase-admin/firestore";
+import { getPublicQuestions, getUserQuestions } from "@/lib/questions/public-questions";
+import { pickQuestions } from "@/lib/questions/pick-questions";
+import { startOfDayInTimeZone } from "@/lib/questions/time";
 
 const createGameSchema = z.object({
   numQuestions: z.number().int().min(1).max(50),
@@ -14,13 +17,26 @@ const createGameSchema = z.object({
   avoidRepeat: z.boolean().default(false),
 });
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+const GAME_TIME_ZONE = "Europe/Rome";
+const JOIN_CODE_ATTEMPTS = 5;
+
+/** Question ids used today (Rome time) by this host's games. */
+async function questionIdsUsedToday(hostId: string): Promise<Set<string>> {
+  const start = Timestamp.fromDate(startOfDayInTimeZone(new Date(), GAME_TIME_ZONE));
+  // Same shape as the dashboard query (hostId == x, orderBy createdAt desc): reuses its index.
+  const todayGames = await gamesCol().where("hostId", "==", hostId).orderBy("createdAt", "desc").endAt(start).get();
+
+  const used = new Set<string>();
+  const legacy: string[] = [];
+  for (const doc of todayGames.docs) {
+    const ids = doc.data().questionIds;
+    if (ids) ids.forEach(id => used.add(id));
+    else legacy.push(doc.id);
   }
-  return a;
+  // Games created before `questionIds` existed: read their questions in parallel.
+  const snaps = await Promise.all(legacy.map(id => gameQuestionsCol(id).get()));
+  for (const snap of snaps) snap.docs.forEach(doc => used.add(doc.data().questionId));
+  return used;
 }
 
 export async function POST(request: Request) {
@@ -28,6 +44,7 @@ export async function POST(request: Request) {
     const session = await auth();
     if (!session?.user?.id)
       return NextResponse.json({ error: "Non autorizzato" }, { status: 401 });
+    const userId = session.user.id;
 
     const body = await request.json();
     const parsed = createGameSchema.safeParse(body);
@@ -40,113 +57,73 @@ export async function POST(request: Request) {
     }
 
     const { numQuestions, maxPerCategory, language, categories, avoidRepeat } = parsed.data;
-    const totalQuestions = numQuestions;
 
-    // Fetch available questions (public + user's own)
-    const [publicSnap, userSnap] = await Promise.all([
-      questionsCol().where("ownerId", "==", null).where("language", "==", language).get(),
-      questionsCol().where("ownerId", "==", session.user.id).where("language", "==", language).get(),
+    const [publicQuestions, userQuestions, excludeIds] = await Promise.all([
+      getPublicQuestions(language),
+      getUserQuestions(userId, language),
+      avoidRepeat ? questionIdsUsedToday(userId) : Promise.resolve(undefined),
     ]);
 
-    let availableQuestions = [
-      ...publicSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
-      ...userSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
-    ];
-
-    // Filter by categories if specified
-    if (categories && categories.length > 0) {
-      availableQuestions = availableQuestions.filter(q => q.category && categories.includes(q.category));
-    }
-
-    // Filter out questions used today if avoidRepeat
-    if (avoidRepeat) {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayTimestamp = Timestamp.fromDate(todayStart);
-
-      // Find games created today
-      const todayGames = await gamesCol()
-        .where("createdAt", ">=", todayTimestamp)
-        .get();
-
-      // Collect all questionIds used today
-      const usedIds = new Set<string>();
-      for (const gameDoc of todayGames.docs) {
-        const gqSnap = await gameQuestionsCol(gameDoc.id).get();
-        gqSnap.docs.forEach(doc => usedIds.add(doc.data().questionId));
-      }
-
-      if (usedIds.size > 0) {
-        availableQuestions = availableQuestions.filter(q => !usedIds.has(q.id));
-      }
-    }
-
-    if (availableQuestions.length < totalQuestions) {
+    const result = pickQuestions([...publicQuestions, ...userQuestions], { numQuestions, maxPerCategory, categories, excludeIds });
+    if (!result.ok) {
       const hint = avoidRepeat ? " Prova a disattivare 'Evita ripetizioni'." : "";
-      return NextResponse.json(
-        {
-          error: `Non ci sono abbastanza domande. Servono ${totalQuestions}, disponibili ${availableQuestions.length}.${hint}`,
-        },
-        { status: 400 }
-      );
+      const error =
+        result.reason === "not-enough"
+          ? `Non ci sono abbastanza domande. Servono ${numQuestions}, disponibili ${result.available}.${hint}`
+          : `Non ci sono abbastanza domande con il limite di ${maxPerCategory} per categoria. Servono ${numQuestions}, selezionabili ${result.selectable}.${hint}`;
+      return NextResponse.json({ error }, { status: 400 });
     }
+    const selected = result.questions;
 
-    // Select questions with max per category limit
-    const shuffledAll = shuffle(availableQuestions);
-    const categoryCounts = new Map<string, number>();
-    const shuffled: typeof availableQuestions = [];
-    for (const q of shuffledAll) {
-      const cat = q.category ?? "unknown";
-      const count = categoryCounts.get(cat) ?? 0;
-      if (count >= maxPerCategory) continue;
-      categoryCounts.set(cat, count + 1);
-      shuffled.push(q);
-      if (shuffled.length >= totalQuestions) break;
-    }
-
-    if (shuffled.length < totalQuestions) {
-      const hint = avoidRepeat ? " Prova a disattivare 'Evita ripetizioni'." : "";
-      return NextResponse.json(
-        {
-          error: `Non ci sono abbastanza domande con il limite di ${maxPerCategory} per categoria. Servono ${totalQuestions}, selezionabili ${shuffled.length}.${hint}`,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Create game with unique joinCode (transactional)
-    const joinCode = generateJoinCode();
     const gameRef = gamesCol().doc();
-    const gameData = {
-      hostId: session.user.id,
-      joinCode,
-      status: "lobby" as const,
-      language,
-      numQuestions,
-      currentQuestionIndex: 0,
-      createdAt: Timestamp.now(),
-    };
+    let gameData: {
+      hostId: string;
+      joinCode: string;
+      status: "lobby";
+      language: string;
+      numQuestions: number;
+      currentQuestionIndex: number;
+      createdAt: Timestamp;
+      questionIds: string[];
+    } | null = null;
 
-    await db.runTransaction(async (tx) => {
-      const joinCodeRef = uniqueJoinCodesCol().doc(joinCode);
-      const existing = await tx.get(joinCodeRef);
-      if (existing.exists) throw new Error("JOIN_CODE_TAKEN");
+    // Game, join code and questions are written atomically; retry on the (rare) join code collision.
+    for (let attempt = 0; attempt < JOIN_CODE_ATTEMPTS && !gameData; attempt++) {
+      const candidate = {
+        hostId: userId,
+        joinCode: generateJoinCode(),
+        status: "lobby" as const,
+        language,
+        numQuestions,
+        currentQuestionIndex: 0,
+        createdAt: Timestamp.now(),
+        questionIds: selected.map(q => q.id),
+      };
+      const created = await db.runTransaction(async (tx) => {
+        const joinCodeRef = uniqueJoinCodesCol().doc(candidate.joinCode);
+        const existing = await tx.get(joinCodeRef);
+        if (existing.exists) return false;
 
-      tx.set(gameRef, gameData);
-      tx.set(joinCodeRef, { gameId: gameRef.id });
-    });
-
-    // Batch write game questions
-    const batch = db.batch();
-    for (let i = 0; i < shuffled.length; i++) {
-      const gqRef = gameQuestionsCol(gameRef.id).doc();
-      batch.set(gqRef, {
-        questionId: shuffled[i].id,
-        position: i + 1,
-        startedAt: null,
+        tx.set(gameRef, candidate);
+        tx.set(joinCodeRef, { gameId: gameRef.id });
+        selected.forEach((q, i) => {
+          // Snapshot of the question: the game no longer depends on later edits/deletions.
+          tx.set(gameQuestionsCol(gameRef.id).doc(), {
+            questionId: q.id,
+            position: i + 1,
+            startedAt: null,
+            category: q.category,
+            text: q.text,
+            choices: q.choices,
+            correctIndex: q.correctIndex,
+          });
+        });
+        return true;
       });
+      if (created) gameData = candidate;
     }
-    await batch.commit();
+
+    if (!gameData) throw new Error("Could not allocate a unique join code");
 
     return NextResponse.json({ id: gameRef.id, ...gameData, createdAt: new Date() }, { status: 201 });
   } catch (error) {
@@ -169,11 +146,16 @@ export async function GET() {
       .orderBy("createdAt", "desc")
       .get();
 
-    const userGames = snap.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate?.() ?? new Date(),
-    }));
+    const userGames = snap.docs.map(doc => {
+      // questionIds is internal bookkeeping: keep the dashboard payload small.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { questionIds, ...game } = doc.data();
+      return {
+        id: doc.id,
+        ...game,
+        createdAt: game.createdAt?.toDate?.() ?? new Date(),
+      };
+    });
 
     return NextResponse.json(userGames);
   } catch (error) {

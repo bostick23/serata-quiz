@@ -1,6 +1,7 @@
+import { ANSWER_TIME_MS } from "./events";
+
 const MAX_POINTS = 200;
 const MIN_POINTS = 50;
-const ANSWER_TIME_MS = 10000;
 
 export function calculateScore(
   isCorrect: boolean,

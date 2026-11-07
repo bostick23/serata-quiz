@@ -19,7 +19,8 @@ export interface QuestionData {
 export interface RankingEntry {
   teamId: string;
   teamName: string;
-  photoUrl: string | null;
+  /** @deprecated photos are sent once with the team list; resolve them by teamId. */
+  photoUrl?: string | null;
   questionScore: number;
   totalScore: number;
   isCorrect: boolean | null;
@@ -39,4 +40,6 @@ export interface GameState {
   correctIndex?: number;
   isLastQuestion?: boolean;
   categoryName?: string;
+  /** Teams that already answered the current question (answer phase only). */
+  answeredTeamIds?: string[];
 }

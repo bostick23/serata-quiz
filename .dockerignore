@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.gitignore
+.env*
+.superpowers
+*.tsbuildinfo
+next-env.d.ts
+coverage
+Dockerfile
+.dockerignore
+.gcloudignore
+cloudbuild.yaml
+scripts
+**/*.test.ts
+vitest.config.ts
+public/uploads

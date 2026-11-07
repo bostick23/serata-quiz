@@ -24,7 +24,8 @@ app.prepare().then(async () => {
   const { initSocketServer, getGameManager, shutdownSocketServer } = await import("./src/lib/socket/server");
 
   const httpServer = createServer((req, res) => {
-    if (req.url === "/healthz") {
+    // Not "/healthz": Cloud Run reserves some paths ending in "z".
+    if (req.url?.split("?")[0] === "/api/health") {
       res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
       res.end(JSON.stringify({ ok: true, uptime: Math.round(process.uptime()), activeGames: getGameManager()?.activeGameCount() ?? 0 }));
       return;

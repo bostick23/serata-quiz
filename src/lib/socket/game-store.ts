@@ -29,7 +29,8 @@ export interface GameStore {
   loadByJoinCode(joinCode: string): Promise<StoredGame | null>;
   newTeamId(gameId: string): string;
   createTeam(gameId: string, team: { id: string; name: string; photoUrl: string | null; rejoinToken: string; socketId: string }): Promise<void>;
-  updateTeamSocket(gameId: string, teamId: string, socketId: string | null): Promise<void>;
+  /** Records the team's current connection and its (possibly rotated) rejoin token. */
+  updateTeamConnection(gameId: string, teamId: string, connection: { socketId: string | null; rejoinToken: string }): Promise<void>;
   saveAnswer(gameId: string, answer: StoredAnswer): Promise<void>;
   saveProgress(gameId: string, progress: { currentQuestionIndex: number; gameQuestionId: string }): Promise<void>;
   markFinished(gameId: string): Promise<void>;

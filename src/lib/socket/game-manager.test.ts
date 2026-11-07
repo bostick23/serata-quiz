@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createServer, type Server as HttpServer } from "http";
 import type { AddressInfo } from "net";
 import { Server } from "socket.io";
-import { io as connect, type Socket as ClientSocket } from "socket.io-client";
+import { io as connect, type Socket as ClientSocket, type ManagerOptions, type SocketOptions } from "socket.io-client";
 import { createGameManager, type GameIO, type GameManager } from "./game-manager";
 import type { GameStore, StoredGame, StoredAnswer } from "./game-store";
 import type { ClientToServerEvents, JoinAck, ServerToClientEvents, SocketData } from "@/types/socket-events";
@@ -60,7 +60,7 @@ class MemoryStore implements GameStore {
   async createTeam(gameId: string, team: { id: string; name: string; photoUrl: string | null; rejoinToken: string }) {
     this.byId(gameId).teams.push({ id: team.id, name: team.name, photoUrl: team.photoUrl, rejoinToken: team.rejoinToken });
   }
-  async updateTeamSocket() {}
+  async updateTeamConnection() {}
   async saveAnswer(gameId: string, answer: StoredAnswer) {
     this.savedAnswers.push(answer);
     this.byId(gameId).answers.push(answer);
@@ -86,17 +86,21 @@ let store: MemoryStore;
 let url: string;
 const clients: ClientSocket[] = [];
 
-async function startServer(game: StoredGame = seedGame()) {
+async function startServer(
+  game: StoredGame = seedGame(),
+  options: { recovery?: boolean; timings?: typeof TIMINGS } = {},
+) {
   store = new MemoryStore(game);
   httpServer = createServer();
   ioServer = new Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>(httpServer, {
     path: "/api/socketio",
     transports: ["websocket"],
+    ...(options.recovery ? { connectionStateRecovery: { maxDisconnectionDuration: 60_000, skipMiddlewares: true } } : {}),
   });
   manager = createGameManager(ioServer, {
     store,
     authenticate: async handshake => (typeof handshake.auth.testUser === "string" ? handshake.auth.testUser : null),
-    timings: TIMINGS,
+    timings: options.timings ?? TIMINGS,
     sweepIntervalMs: 0,
   });
   await new Promise<void>(resolve => httpServer.listen(0, resolve));
@@ -109,13 +113,14 @@ async function stopServer() {
   await new Promise<void>(resolve => ioServer.close(() => resolve()));
 }
 
-async function client(testUser?: string): Promise<ClientSocket> {
+async function client(testUser?: string, extra: Partial<ManagerOptions & SocketOptions> = {}): Promise<ClientSocket> {
   const socket = connect(url, {
     path: "/api/socketio",
     transports: ["websocket"],
     forceNew: true,
     reconnection: false,
     auth: testUser ? { testUser } : {},
+    ...extra,
   });
   clients.push(socket);
   await new Promise<void>((resolve, reject) => {
@@ -319,6 +324,59 @@ describe("game manager (socket integration)", () => {
     expect(ack.ok).toBe(false);
   });
 
+  it("acknowledges host-join", async () => {
+    const hostSocket = await client("host-user");
+    expect(await hostSocket.timeout(1500).emitWithAck("game:host-join", { joinCode: JOIN_CODE })).toEqual({ ok: true });
+  });
+
+  it("lets any connected host tab control the game, not only the last one that joined", async () => {
+    const laptop = await host();
+    const phone = await host();
+    const player = await client();
+    await join(player, "A");
+    phone.disconnect();
+    await wait(50);
+
+    const ack = await laptop.timeout(1500).emitWithAck("game:start", { joinCode: JOIN_CODE });
+
+    expect(ack).toEqual({ ok: true });
+    await next(player, "question:category");
+  });
+
+  it("acknowledges a refused host command so the host UI can recover", async () => {
+    await host();
+    const player = await client();
+    await join(player, "A");
+
+    const ack = await player.timeout(1500).emitWithAck("game:start", { joinCode: JOIN_CODE });
+
+    expect(ack.ok).toBe(false);
+  });
+
+  it("tells a connection that another device took over its team", async () => {
+    const first = await client();
+    const ack = await join(first, "A");
+    if (!ack.ok) throw new Error("join failed");
+    const replaced = next(first, "team:replaced");
+
+    await join(await client(), "A", ack.rejoinToken);
+
+    await replaced;
+  });
+
+  it("issues a new token when an offline team is reclaimed by name, so the old token stops taking it back", async () => {
+    const first = await client();
+    const a1 = await join(first, "A");
+    first.disconnect();
+    await wait(50);
+
+    const a2 = await join(await client(), "A");
+    const withOldToken = await join(await client(), "A", a1.ok ? a1.rejoinToken : "");
+
+    expect(a1.ok && a2.ok && a2.rejoinToken !== a1.rejoinToken).toBe(true);
+    expect(withOldToken).toMatchObject({ ok: false, code: "name-taken" });
+  });
+
   it("removes abandoned games during the sweep", async () => {
     const player = await client();
     await join(player, "A");
@@ -357,11 +415,70 @@ describe("game manager recovery after a restart", () => {
     expect(s.rankings?.[0].totalScore).toBe(180);
   });
 
+  it("lets a team rejoin a finished game with its token and see the final rankings", async () => {
+    await startServer(
+      seedGame({
+        status: "finished",
+        currentQuestionIndex: 2,
+        teams: [{ id: "t1", name: "A", photoUrl: null, rejoinToken: "tok-1" }],
+        answers: [{ teamId: "t1", gameQuestionId: "gq1", chosenIndex: 1, score: 150 }],
+      }),
+    );
+    const player = await client();
+    const state = next<{ phase: string; rankings?: Array<{ totalScore: number }> }>(player, "game:state");
+
+    const ack = await join(player, "whatever", "tok-1");
+
+    expect(ack).toMatchObject({ ok: true, teamId: "t1" });
+    const s = await state;
+    expect(s.phase).toBe("finished");
+    expect(s.rankings?.[0].totalScore).toBe(150);
+  });
+
+  it("does not let new teams join a finished game", async () => {
+    await startServer(seedGame({ status: "finished", currentQuestionIndex: 2 }));
+    expect(await join(await client(), "Nuova")).toMatchObject({ ok: false, code: "finished" });
+  });
+
   it("lets a team rejoin with its persisted token after a restart", async () => {
     await startServer(seedGame({ teams: [{ id: "t1", name: "A", photoUrl: null, rejoinToken: "tok-1" }] }));
 
     const ack = await join(await client(), "whatever", "tok-1");
 
     expect(ack).toMatchObject({ ok: true, teamId: "t1", teamName: "A" });
+  });
+});
+
+describe("game manager with connection state recovery", () => {
+  afterEach(async () => {
+    await stopServer();
+  });
+
+  it("a recovered connection whose team was taken over meanwhile is told and cannot answer", async () => {
+    await startServer(seedGame(), { recovery: true, timings: { categoryMs: 600, readMs: 300, answerMs: 1500 } });
+    const hostSocket = await host();
+    const first = await client(undefined, { reconnection: true, reconnectionDelay: 400, randomizationFactor: 0 });
+    expect((await join(first, "A")).ok).toBe(true);
+    hostSocket.emit("game:start", { joinCode: JOIN_CODE });
+    await next(first, "question:category"); // a broadcast gives the client a recovery offset
+
+    const left = next(hostSocket, "team:left");
+    first.io.engine.close(); // network drop: the client reconnects by itself after 400ms
+    await left;
+    const second = await client();
+    expect((await join(second, "A")).ok).toBe(true); // a teammate reclaims the offline team by name
+    const replaced = next(first, "team:replaced");
+    await next(first, "connect");
+    expect(first.recovered).toBe(true);
+    await replaced;
+
+    const show = await next<{ question: { gameQuestionId: string } }>(second, "question:show");
+    await next(second, "question:answer-phase");
+    const ack = await first.timeout(1500).emitWithAck("answer:submit", {
+      joinCode: JOIN_CODE,
+      gameQuestionId: show.question.gameQuestionId,
+      chosenIndex: 1,
+    });
+    expect(ack.ok).toBe(false);
   });
 });

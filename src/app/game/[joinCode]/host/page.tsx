@@ -6,6 +6,7 @@ import { useGameState } from "@/hooks/use-game-state";
 import { useCountdown } from "@/hooks/use-countdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { getCategoryImage } from "@/lib/category-images";
+import { MAX_JOIN_ATTEMPTS, retryDelayMs } from "@/lib/retry";
 
 interface Props {
   params: Promise<{ joinCode: string }>;
@@ -21,6 +22,7 @@ export default function HostPage({ params }: Props) {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [revealedCount, setRevealedCount] = useState(0);
   const [actionPending, setActionPending] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const voiceRef = useRef<SpeechSynthesisVoice | null>(null);
   // Photos travel once with the team list; rankings reference teams by id.
   const photoById = useMemo(() => new Map(gameState.teams.map(t => [t.id, t.photoUrl])), [gameState.teams]);
@@ -98,10 +100,39 @@ export default function HostPage({ params }: Props) {
     setJoinUrl(`${window.location.origin}/game/${joinCode}/play`);
   }, [joinCode]);
 
+  // Join as host on every (re)connection; transient server errors and timeouts are retried with backoff.
   useEffect(() => {
-    if (socket && isConnected) {
-      socket.emit("game:host-join", { joinCode });
-    }
+    if (!socket || !isConnected) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const attempt = async (n: number) => {
+      try {
+        const res = await socket.timeout(10_000).emitWithAck("game:host-join", { joinCode });
+        if (cancelled) return;
+        if (res.ok) {
+          setLocalError(null);
+          return;
+        }
+        if (res.code !== "server-error") {
+          setLocalError(res.error);
+          return;
+        }
+      } catch {
+        if (cancelled) return;
+      }
+      if (n + 1 >= MAX_JOIN_ATTEMPTS) {
+        setLocalError("Impossibile collegarsi alla partita: ricarica la pagina.");
+        return;
+      }
+      timer = setTimeout(() => void attempt(n + 1), retryDelayMs(n));
+    };
+    void attempt(0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [socket, isConnected, joinCode]);
 
   useEffect(() => {
@@ -113,16 +144,34 @@ export default function HostPage({ params }: Props) {
     }
   }, [gameState.phase, joinCode]);
 
-  function handleStart() {
-    if (actionPending) return;
+  /** Sends a host command; on refusal (or no answer) the button is re-enabled and the reason shown. */
+  async function sendCommand(event: "game:start" | "question:next") {
+    if (!socket || actionPending) return;
     setActionPending(true);
-    socket?.emit("game:start", { joinCode });
+    try {
+      const res =
+        event === "game:start"
+          ? await socket.timeout(8_000).emitWithAck("game:start", { joinCode })
+          : await socket.timeout(8_000).emitWithAck("question:next", { joinCode });
+      // On success the phase change re-enables the button.
+      if (!res.ok) showCommandError(res.error);
+    } catch {
+      showCommandError("Il server non risponde, riprova.");
+    }
+  }
+
+  function showCommandError(message: string) {
+    setActionPending(false);
+    setLocalError(message);
+    setTimeout(() => setLocalError(prev => (prev === message ? null : prev)), 6_000);
+  }
+
+  function handleStart() {
+    void sendCommand("game:start");
   }
 
   function handleNextQuestion() {
-    if (actionPending) return;
-    setActionPending(true);
-    socket?.emit("question:next", { joinCode });
+    void sendCommand("question:next");
   }
 
   function handleCancel() {
@@ -183,9 +232,9 @@ export default function HostPage({ params }: Props) {
         </div>
       )}
 
-      {error && (
+      {(localError ?? error) && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-red-500/20 border border-red-500/50 text-red-400 px-6 py-3 rounded-xl">
-          {error}
+          {localError ?? error}
         </div>
       )}
 

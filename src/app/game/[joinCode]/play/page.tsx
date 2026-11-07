@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { getCategoryImage } from "@/lib/category-images";
 import { AdBanner } from "@/components/ad-banner";
 import { clearTeamSession, loadTeamSession, saveTeamSession } from "@/lib/team-session";
+import { MAX_JOIN_ATTEMPTS, retryDelayMs } from "@/lib/retry";
 import type { JoinAck } from "@/types/socket-events";
 
 interface Props {
@@ -29,6 +30,9 @@ export default function PlayPage({ params }: Props) {
   const [answer, setAnswer] = useState<{ gameQuestionId: string; index: number } | null>(null);
   const [myTeamId, setMyTeamId] = useState<string | null>(null);
   const [, forceRender] = useState(0);
+  const [rejoinNonce, setRejoinNonce] = useState(0);
+  const [rejoinFailed, setRejoinFailed] = useState(false);
+  const forceRejoinRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Read on every render (cheap); the server snapshot keeps hydration consistent.
@@ -43,6 +47,7 @@ export default function PlayPage({ params }: Props) {
       setMyTeamId(res.teamId);
       setTeamName(res.teamName);
       setJoined(true);
+      setRejoinFailed(false);
       setError(null);
       return;
     }
@@ -55,27 +60,68 @@ export default function PlayPage({ params }: Props) {
 
   // (Re)join automatically on every (re)connection with the stored rejoin token:
   // covers page refreshes and reconnections the server could not recover by itself.
+  // Transient failures (server error, no answer) are retried with backoff; after that the form is re-enabled.
   useEffect(() => {
     if (!socket || !isConnected) return;
-    if (socket.recovered && joined) return; // Socket.io restored room membership and missed events
+    const forced = forceRejoinRef.current;
+    forceRejoinRef.current = false;
+    // Socket.io restored room membership and missed events by itself.
+    if (socket.recovered && joined && !forced) return;
     const session = loadTeamSession(joinCode);
     if (!session) return;
 
     let cancelled = false;
-    socket
-      .timeout(10_000)
-      .emitWithAck("game:join", { joinCode, teamName: session.teamName, rejoinToken: session.rejoinToken })
-      .then(res => {
-        if (!cancelled) applyJoinAck(res, session.teamName);
-      })
-      .catch(() => {
-        // No answer in time: the next reconnection retries.
-      });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const attempt = async (n: number) => {
+      try {
+        const res = await socket
+          .timeout(10_000)
+          .emitWithAck("game:join", { joinCode, teamName: session.teamName, rejoinToken: session.rejoinToken });
+        if (cancelled) return;
+        if (res.ok || res.code !== "server-error") {
+          applyJoinAck(res, session.teamName);
+          return;
+        }
+      } catch {
+        if (cancelled) return;
+      }
+      if (n + 1 >= MAX_JOIN_ATTEMPTS) {
+        setJoined(false);
+        setTeamName(session.teamName);
+        setRejoinFailed(true);
+        return;
+      }
+      timer = setTimeout(() => void attempt(n + 1), retryDelayMs(n));
+    };
+    void attempt(0);
+
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only on connection changes
-  }, [socket, isConnected, joinCode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only on connection changes or explicit retries
+  }, [socket, isConnected, joinCode, rejoinNonce]);
+
+  function requestRejoin() {
+    forceRejoinRef.current = true;
+    setRejoinFailed(false);
+    setRejoinNonce(n => n + 1);
+  }
+
+  // Another device took over this team (e.g. a teammate reclaimed it): back to the join form.
+  useEffect(() => {
+    if (!socket) return;
+    const onReplaced = ({ message }: { message: string }) => {
+      clearTeamSession(joinCode);
+      setJoined(false);
+      setMyTeamId(null);
+      setError(message);
+    };
+    socket.on("team:replaced", onReplaced);
+    return () => {
+      socket.off("team:replaced", onReplaced);
+    };
+  }, [socket, joinCode, setError]);
 
   // A cancelled game cannot be rejoined: forget the stored team.
   useEffect(() => {
@@ -94,7 +140,8 @@ export default function PlayPage({ params }: Props) {
     if (!socket || !isConnected || !teamName.trim() || joining) return;
     setJoining(true);
     try {
-      const res = await socket.timeout(10_000).emitWithAck("game:join", { joinCode, teamName, photoUrl });
+      const rejoinToken = loadTeamSession(joinCode)?.rejoinToken;
+      const res = await socket.timeout(10_000).emitWithAck("game:join", { joinCode, teamName, photoUrl, rejoinToken });
       applyJoinAck(res, teamName);
     } catch {
       setError("Il server non risponde, riprova.");
@@ -105,6 +152,7 @@ export default function PlayPage({ params }: Props) {
 
   function handleJoinAsNewTeam() {
     clearTeamSession(joinCode);
+    setRejoinFailed(false);
     forceRender(n => n + 1);
   }
 
@@ -116,8 +164,10 @@ export default function PlayPage({ params }: Props) {
       const res = await socket.timeout(5_000).emitWithAck("answer:submit", { joinCode, gameQuestionId, chosenIndex });
       if (res.ok) return;
       if (res.reason === "not-joined") {
+        // The server no longer binds this connection to the team: rejoin, then the player can answer again.
         setAnswer(null);
-        setError("Connessione persa: riprova a rispondere.");
+        setError("Connessione persa: ricollegamento in corso, poi riprova a rispondere.");
+        requestRejoin();
       } else if (res.reason === "wrong-phase" || res.reason === "stale-question") {
         setError("Tempo scaduto: risposta non registrata.");
       }
@@ -216,9 +266,20 @@ export default function PlayPage({ params }: Props) {
 
             {hasStoredSession && (
               <div className="w-full max-w-sm mb-6 bg-slate-800 border border-slate-700 rounded-xl p-4 text-center">
-                <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                <p className="text-slate-300 text-sm">Riconnessione alla tua squadra…</p>
-                <button type="button" onClick={handleJoinAsNewTeam} className="mt-2 text-xs text-slate-400 underline hover:text-white">
+                {rejoinFailed ? (
+                  <>
+                    <p className="text-slate-300 text-sm">Non riesco a ricollegarti alla tua squadra.</p>
+                    <button type="button" onClick={requestRejoin} className="mt-2 px-4 py-1.5 rounded-lg bg-purple-600 text-white text-sm font-semibold">
+                      Riprova
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <p className="text-slate-300 text-sm">Riconnessione alla tua squadra…</p>
+                  </>
+                )}
+                <button type="button" onClick={handleJoinAsNewTeam} className="mt-2 block mx-auto text-xs text-slate-400 underline hover:text-white">
                   Entra con un&apos;altra squadra
                 </button>
               </div>
@@ -264,7 +325,7 @@ export default function PlayPage({ params }: Props) {
 
               <button
                 type="submit"
-                disabled={joining || hasStoredSession || !teamName.trim() || !isConnected}
+                disabled={joining || (hasStoredSession && !rejoinFailed) || !teamName.trim() || !isConnected}
                 className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-xl shadow-lg hover:shadow-pink-500/25 transition-all disabled:opacity-50"
               >
                 {joining ? "Accesso..." : "Unisciti!"}

@@ -100,8 +100,8 @@ export const firestoreGameStore: GameStore = {
     });
   },
 
-  async updateTeamSocket(gameId, teamId, socketId) {
-    await teamsCol(gameId).doc(teamId).update({ socketId });
+  async updateTeamConnection(gameId, teamId, { socketId, rejoinToken }) {
+    await teamsCol(gameId).doc(teamId).update({ socketId, rejoinToken });
   },
 
   async saveAnswer(gameId, answer) {

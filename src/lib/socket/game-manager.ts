@@ -23,7 +23,15 @@ import {
 import { answerPayloadSchema, joinCodePayloadSchema, joinPayloadSchema, timeSyncPayloadSchema } from "./schemas";
 import { ANSWER_TIME_MS, CATEGORY_TIME_MS, READ_TIME_MS } from "./events";
 import type { GameStore } from "./game-store";
-import type { AnswerAck, ClientToServerEvents, JoinAck, ServerToClientEvents, SocketData } from "@/types/socket-events";
+import type {
+  AnswerAck,
+  ClientToServerEvents,
+  CommandAck,
+  HostJoinAck,
+  JoinAck,
+  ServerToClientEvents,
+  SocketData,
+} from "@/types/socket-events";
 
 export type GameIO = Server<ClientToServerEvents, ServerToClientEvents, Record<string, never>, SocketData>;
 type IO = GameIO;
@@ -58,7 +66,6 @@ interface ActiveGame {
   joinCode: string;
   gameId: string;
   hostId: string;
-  hostSocketId: string | null;
   language: string;
   runtime: GameRuntime;
   timer: ReturnType<typeof setTimeout> | null;
@@ -68,9 +75,15 @@ interface ActiveGame {
 
 const ERROR_GENERIC = "Errore del server, riprova tra qualche secondo.";
 const ERROR_NOT_FOUND = "Partita non trovata";
+const MESSAGE_REPLACED = "La tua squadra è stata ripresa da un altro dispositivo.";
 
 function roomOf(joinCode: string) {
   return `game:${joinCode}`;
+}
+
+/** Every host tab (laptop on the TV, phone in the pocket) joins this room. */
+function hostRoomOf(joinCode: string) {
+  return `host:${joinCode}`;
 }
 
 export function createGameManager(io: IO, deps: GameManagerDeps): GameManager {
@@ -121,11 +134,25 @@ export function createGameManager(io: IO, deps: GameManagerDeps): GameManager {
   }
 
   function notifyHost(game: ActiveGame, message: string) {
-    if (game.hostSocketId) io.to(game.hostSocketId).emit("error", { message });
+    io.to(hostRoomOf(game.joinCode)).emit("error", { message });
   }
 
+  /** Any connection of the game's host user that joined this game as host may control it. */
   function isHost(socket: GameSocket, game: ActiveGame) {
-    return game.hostSocketId === socket.id && socket.data.userId === game.hostId;
+    return socket.data.role === "host" && socket.data.joinCode === game.joinCode && socket.data.userId === game.hostId;
+  }
+
+  function hostConnected(game: ActiveGame) {
+    return (io.sockets.adapter.rooms.get(hostRoomOf(game.joinCode))?.size ?? 0) > 0;
+  }
+
+  /** Tells a connection that it no longer represents its team, and unbinds it. */
+  function evictFromTeam(socket: GameSocket, joinCode: string) {
+    socket.emit("team:replaced", { message: MESSAGE_REPLACED });
+    socket.leave(roomOf(joinCode));
+    socket.data.teamId = undefined;
+    socket.data.joinCode = undefined;
+    socket.data.role = undefined;
   }
 
   function isConnected(socketId: string | null) {
@@ -181,7 +208,6 @@ export function createGameManager(io: IO, deps: GameManagerDeps): GameManager {
       joinCode,
       gameId: stored.gameId,
       hostId: stored.hostId,
-      hostSocketId: null,
       language: stored.language,
       runtime,
       timer: null,
@@ -263,12 +289,7 @@ export function createGameManager(io: IO, deps: GameManagerDeps): GameManager {
 
   function detachSocketFromTeam(game: ActiveGame, team: EngineTeam, socketId: string) {
     const old = io.sockets.sockets.get(socketId);
-    if (old) {
-      old.leave(roomOf(game.joinCode));
-      old.data.teamId = undefined;
-      old.data.joinCode = undefined;
-      old.data.role = undefined;
-    }
+    if (old) evictFromTeam(old, game.joinCode);
     if (team.socketId === socketId) team.socketId = null;
   }
 
@@ -322,24 +343,31 @@ export function createGameManager(io: IO, deps: GameManagerDeps): GameManager {
         team.connected = true;
         touch(game);
         io.to(roomOf(game.joinCode)).emit("team:joined", { team: toTeamInfo(team), teamCount: game.runtime.teams.size });
+      } else if (joinCode && teamId) {
+        // The team was taken over by another device while this one was away (or the game is gone).
+        evictFromTeam(socket, joinCode);
       }
-      if (game && socket.data.role === "host" && socket.data.userId === game.hostId) game.hostSocketId = socket.id;
     }
 
-    socket.on("game:host-join", safe(socket, "game:host-join", async (raw: unknown) => {
+    socket.on("game:host-join", safe(socket, "game:host-join", async (raw: unknown, ack?: unknown) => {
+      const reply = (res: HostJoinAck) => {
+        if (typeof ack === "function") ack(res);
+        else if (!res.ok) socket.emit("error", { message: res.error });
+      };
       const parsed = joinCodePayloadSchema.safeParse(raw);
-      if (!parsed.success) return socket.emit("error", { message: ERROR_NOT_FOUND });
+      if (!parsed.success) return reply({ ok: false, code: "invalid", error: ERROR_NOT_FOUND });
 
       const game = await getOrLoadGame(parsed.data.joinCode);
-      if (!game) return socket.emit("error", { message: ERROR_NOT_FOUND });
-      if (!socket.data.userId) return socket.emit("error", { message: "Accesso host non autorizzato: effettua il login." });
-      if (socket.data.userId !== game.hostId) return socket.emit("error", { message: "Non sei l'host di questa partita." });
+      if (!game) return reply({ ok: false, code: "not-found", error: ERROR_NOT_FOUND });
+      if (!socket.data.userId) return reply({ ok: false, code: "unauthorized", error: "Accesso host non autorizzato: effettua il login." });
+      if (socket.data.userId !== game.hostId) return reply({ ok: false, code: "unauthorized", error: "Non sei l'host di questa partita." });
 
-      game.hostSocketId = socket.id;
       socket.data.role = "host";
       socket.data.joinCode = game.joinCode;
       socket.join(roomOf(game.joinCode));
+      socket.join(hostRoomOf(game.joinCode));
       touch(game);
+      reply({ ok: true });
       socket.emit("game:state", stateOf(game));
     }));
 
@@ -355,10 +383,10 @@ export function createGameManager(io: IO, deps: GameManagerDeps): GameManager {
 
       const game = await getOrLoadGame(joinCode);
       if (!game) return reply({ ok: false, code: "not-found", error: ERROR_NOT_FOUND });
-      if (game.runtime.phase === "finished") return reply({ ok: false, code: "finished", error: "La partita è terminata." });
 
       // Everything below is synchronous: no other event can interleave between check and update.
       let team: EngineTeam | undefined;
+      let reclaimedByName = false;
       if (rejoinToken) {
         team = Array.from(game.runtime.teams.values()).find(t => t.rejoinToken !== "" && t.rejoinToken === rejoinToken);
       }
@@ -369,17 +397,23 @@ export function createGameManager(io: IO, deps: GameManagerDeps): GameManager {
           const takenByOther = sameName.socketId !== socket.id && sameName.connected && isConnected(sameName.socketId);
           if (takenByOther) return reply({ ok: false, code: "name-taken", error: "Nome squadra già in uso" });
           team = sameName;
+          reclaimedByName = sameName.socketId !== socket.id;
         }
       }
+      // A finished game can still be rejoined (to watch the final ranking), but not by new teams.
+      if (!team && game.runtime.phase === "finished") return reply({ ok: false, code: "finished", error: "La partita è terminata." });
 
       // A socket switching team or game releases its previous team first.
       if (socket.data.teamId && (socket.data.joinCode !== joinCode || socket.data.teamId !== team?.id)) releaseSocket(socket);
 
       if (team) {
-        if (!team.rejoinToken) team.rejoinToken = randomBytes(16).toString("base64url");
+        // Reclaiming by name rotates the token: the previous device can no longer take the team back silently.
+        if (!team.rejoinToken || reclaimedByName) team.rejoinToken = randomBytes(16).toString("base64url");
         attachTeam(socket, game, team);
         const reclaimed = team;
-        persist("team-socket", () => store.updateTeamSocket(game.gameId, reclaimed.id, socket.id));
+        persist("team-connection", () =>
+          store.updateTeamConnection(game.gameId, reclaimed.id, { socketId: socket.id, rejoinToken: reclaimed.rejoinToken }),
+        );
       } else {
         const created: EngineTeam = {
           id: store.newTeamId(game.gameId),
@@ -408,20 +442,48 @@ export function createGameManager(io: IO, deps: GameManagerDeps): GameManager {
       socket.emit("game:state", stateOf(game));
     }));
 
-    socket.on("game:start", safe(socket, "game:start", (raw: unknown) => {
+    /** Resolves the game for a host command, replying with an error (and a state resync) when refused. */
+    function hostCommand(raw: unknown, ack: unknown, expectedPhase: GameRuntime["phase"]): ActiveGame | null {
+      const reply = (res: CommandAck) => {
+        if (typeof ack === "function") ack(res);
+        else if (!res.ok) socket.emit("error", { message: res.error });
+      };
       const parsed = joinCodePayloadSchema.safeParse(raw);
       const game = parsed.success ? activeGames.get(parsed.data.joinCode) : undefined;
-      if (!game || !isHost(socket, game) || game.runtime.phase !== "lobby") return;
-      if (game.runtime.teams.size < 1) return socket.emit("error", { message: "Serve almeno una squadra" });
+      if (!game) {
+        reply({ ok: false, error: ERROR_NOT_FOUND });
+        return null;
+      }
+      if (!isHost(socket, game)) {
+        reply({ ok: false, error: "Solo l'host può comandare la partita." });
+        return null;
+      }
+      if (game.runtime.phase !== expectedPhase) {
+        reply({ ok: false, error: "Azione non disponibile in questo momento." });
+        socket.emit("game:state", stateOf(game)); // the host UI was out of sync
+        return null;
+      }
       touch(game);
-      showQuestion(game, 1);
+      reply({ ok: true });
+      return game;
+    }
+
+    socket.on("game:start", safe(socket, "game:start", (raw: unknown, ack?: unknown) => {
+      const parsed = joinCodePayloadSchema.safeParse(raw);
+      const candidate = parsed.success ? activeGames.get(parsed.data.joinCode) : undefined;
+      if (candidate && isHost(socket, candidate) && candidate.runtime.teams.size < 1) {
+        const res: CommandAck = { ok: false, error: "Serve almeno una squadra" };
+        if (typeof ack === "function") ack(res);
+        else socket.emit("error", { message: res.error });
+        return;
+      }
+      const game = hostCommand(raw, ack, "lobby");
+      if (game) showQuestion(game, 1);
     }));
 
-    socket.on("question:next", safe(socket, "question:next", (raw: unknown) => {
-      const parsed = joinCodePayloadSchema.safeParse(raw);
-      const game = parsed.success ? activeGames.get(parsed.data.joinCode) : undefined;
-      if (!game || !isHost(socket, game) || game.runtime.phase !== "results") return;
-      touch(game);
+    socket.on("question:next", safe(socket, "question:next", (raw: unknown, ack?: unknown) => {
+      const game = hostCommand(raw, ack, "results");
+      if (!game) return;
 
       if (isLastQuestion(game.runtime)) {
         const rankings = finishGame(game.runtime);
@@ -443,7 +505,11 @@ export function createGameManager(io: IO, deps: GameManagerDeps): GameManager {
       const { joinCode, gameQuestionId, chosenIndex } = parsed.data;
       const game = activeGames.get(joinCode);
       const teamId = socket.data.teamId;
-      if (!game || !teamId || socket.data.joinCode !== joinCode) return reply({ ok: false, reason: "not-joined" });
+      // Only the connection currently bound to the team may answer for it.
+      const team = teamId ? game?.runtime.teams.get(teamId) : undefined;
+      if (!game || !teamId || !team || socket.data.joinCode !== joinCode || team.socketId !== socket.id) {
+        return reply({ ok: false, reason: "not-joined" });
+      }
 
       const result = recordAnswer(game.runtime, teamId, gameQuestionId, chosenIndex, Date.now());
       if (!result.ok) return reply({ ok: false, reason: result.reason });
@@ -493,7 +559,6 @@ export function createGameManager(io: IO, deps: GameManagerDeps): GameManager {
       try {
         const { joinCode } = socket.data;
         const game = joinCode ? activeGames.get(joinCode) : undefined;
-        if (game?.hostSocketId === socket.id) game.hostSocketId = null;
         if (game) touch(game);
 
         const teamId = socket.data.teamId;
@@ -515,7 +580,7 @@ export function createGameManager(io: IO, deps: GameManagerDeps): GameManager {
     let removed = 0;
     for (const [joinCode, game] of activeGames) {
       const someoneConnected =
-        isConnected(game.hostSocketId) ||
+        hostConnected(game) ||
         Array.from(game.runtime.teams.values()).some(t => t.connected && isConnected(t.socketId));
       const timeout = game.runtime.phase === "finished" ? finishedTimeoutMs : idleTimeoutMs;
       if (!someoneConnected && now - game.lastActivity > timeout) {
